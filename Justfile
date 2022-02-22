@@ -3,6 +3,8 @@ set positional-arguments
 INVENTORY := "./inventory.ini"
 
 alias p := playbook
+alias s := shell
+alias i := inventory
 
 # Run an ansible playbook against the hosts (host key checking disabled)
 playbook playbook="./playbook.yml" inv=INVENTORY:
