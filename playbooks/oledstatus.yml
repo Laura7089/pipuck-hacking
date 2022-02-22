@@ -1,0 +1,18 @@
+- hosts: all
+  gather_facts: no
+
+  tasks:
+    - name: copy script to pi
+      copy:
+        src: "./scripts/oled-ip.py"
+        dest: "/usr/bin/oledstatus"
+        mode: 0755
+    - name: copy service to pi
+      copy:
+        src: "./scripts/oledstatus.service"
+        dest: "/etc/systemd/system/oledstatus.service"
+    - name: enable and start service
+      systemd:
+        name: oledstatus.service
+        state: started
+        enabled: yes

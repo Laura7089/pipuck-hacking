@@ -1,0 +1,10 @@
+[Unit]
+Description=Display the hostname on the LCD display
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/bin/oledstatus
+
+[Install]
+WantedBy=network-online.target
