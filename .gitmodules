@@ -13,3 +13,6 @@
 [submodule "tools/pi-puck-ros2-examples"]
 	path = tools/pi-puck-ros2-examples
 	url = https://github.com/lucas-d87u/Pi_Puck-ROS2-Code-Examples.git
+[submodule "playbooks/laura7089.ros2"]
+	path = playbooks/laura7089.ros2
+	url = https://github.com/Laura7089/ros2-ansible.git
