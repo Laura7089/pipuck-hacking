@@ -2,10 +2,6 @@ set positional-arguments
 
 INVENTORY := "./inventory.ini"
 
-alias p := playbook
-alias s := shell
-alias i := inventory
-
 # Run an ansible playbook against the hosts (host key checking disabled)
 playbook playbook="./playbook.yml" inv=INVENTORY:
     ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -i {{inv}} {{playbook}}
