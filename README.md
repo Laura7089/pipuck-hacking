@@ -4,8 +4,9 @@ A loose collection of scripts, bits and bobs for hacking on Pi-Pucks.
 
 ## Usage
 
-Print all the `just` recipes:
-
 ```bash
+# Install ansible required roles
+ansible-galaxy install -r ./requirements.yml
+# Print out available just recipes, these are linked up to the rest of the repo
 just --list
 ```
