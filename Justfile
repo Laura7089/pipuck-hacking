@@ -55,3 +55,7 @@ snap device outfile="./rpi.img":
     fi
     sudo dd if={{ device }} of={{ outfile }} status=progress bs=64k
     ./tools/pishrink/pishrink.sh {{ outfile }}
+
+# Generate an image with packer
+image script="./packer/default.pkr.hcl":
+    sudo packer build {{script}}
