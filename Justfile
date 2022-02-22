@@ -1,18 +1,19 @@
 set positional-arguments
 
 INVENTORY := "./inventory.ini"
-SUBNET_CMD := "$(ip -o -f inet addr show wlan0 | awk '/scope global/ {print $4}')"
+SUBNET_CMD := `ip -o -f inet addr show wlan0 | awk '/scope global/ {print $4}'`
+export ANSIBLE_HOST_KEY_CHECKING := "False"
 
 # Run an ansible playbook
-play playbook="./playbooks/default.yml" inv=INVENTORY:
-    ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -i {{inv}} {{playbook}}
+play playbook="./playbooks/default.yml":
+    ansible-playbook -i {{INVENTORY}} {{playbook}}
 
 # Run an arbitrary command
-shell cmd="echo 'Hello, world'" inv=INVENTORY:
-    ANSIBLE_HOST_KEY_CHECKING=False ansible -i {{inv}} all -a "{{cmd}}"
+shell +CMD:
+    ansible -i {{INVENTORY}} all -a "{{CMD}}"
 
 # Generate an inventory
-inv target_subnet=SUBNET_CMD file=INVENTORY:
+inv target_subnet=SUBNET_CMD:
     #!/bin/bash
     set -eo pipefail
 
@@ -39,8 +40,8 @@ inv target_subnet=SUBNET_CMD file=INVENTORY:
         exit 1
     fi
     echo "$changes"
-    rm -f {{file}}
-    echo "$changes" | xargs -I {} sh -c "printf '{} ansible_ssh_user=pi ansible_ssh_pass=raspberry\n' >> {{file}}"
+    rm -f {{INVENTORY}}
+    echo "$changes" | xargs -I {} sh -c "printf '{} ansible_ssh_user=pi ansible_ssh_pass=raspberry\n' >> {{INVENTORY}}"
 
 # Take an image of an SD
 snap device outfile="./rpi.img":
