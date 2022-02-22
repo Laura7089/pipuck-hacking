@@ -1,0 +1,15 @@
+[submodule "tools/pishrink"]
+	path = tools/pishrink
+	url = https://github.com/Drewsif/PiShrink.git
+[submodule "tools/pi-gen-yrl"]
+	path = tools/pi-gen-yrl
+	url = https://github.com/yorkrobotlab/pi-gen.git
+[submodule "tools/epuck_ros2"]
+	path = tools/epuck_ros2
+	url = https://github.com/cyberbotics/epuck_ros2.git
+[submodule "tools/pi-puck-yrl"]
+	path = tools/pi-puck-yrl
+	url = https://github.com/yorkrobotlab/pi-puck.git
+[submodule "tools/pi-puck-ros2-examples"]
+	path = tools/pi-puck-ros2-examples
+	url = https://github.com/lucas-d87u/Pi_Puck-ROS2-Code-Examples.git
