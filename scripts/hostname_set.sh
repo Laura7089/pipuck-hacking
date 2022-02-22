@@ -2,7 +2,7 @@
 
 HOSTNAME_FILE="/etc/hostname"
 
-if [ -n "$(cat $HOSTNAME_FILE)" ]; then
+if [ -n "$(cat $HOSTNAME_FILE)" ] || [ "$(cat $HOSTNAME_FILE)" = "pi-puck" ]; then
     echo "Hostname already set to $(cat $HOSTNAME_FILE)"
     exit 0
 fi
