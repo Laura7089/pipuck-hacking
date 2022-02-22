@@ -42,7 +42,7 @@ inv target_subnet=SUBNET_CMD file=INVENTORY:
     rm -f {{file}}
     echo "$changes" | xargs -I {} sh -c "printf '{} ansible_ssh_user=pi ansible_ssh_pass=raspberry\n' >> {{file}}"
 
-# Take an image of a pi SD card
+# Take an image of an SD
 snap device outfile="./rpi.img":
     @# From https://stackoverflow.com/questions/965053/extract-filename-and-extension-in-bash
     @if [[ "{{extension(outfile)}}" != "img" ]]; then \
