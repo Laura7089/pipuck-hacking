@@ -15,7 +15,7 @@ from PIL import ImageFont
 try:
     device = ssd1306(i2c(port=3, address=0x3C), width=128, height=32, rotate=0)
 except:
-    device = ssd1306(i2c(port=13, address=0x3C),
+    device = ssd1306(i2c(port=13, address=0x3D),
                      width=128,
                      height=32,
                      rotate=0)
@@ -43,7 +43,7 @@ with canvas(device) as draw:
     hostname = subprocess.check_output(cmd, shell=True).decode("utf-8")
     cmd = "hostname -I"
     ip = subprocess.check_output(cmd, shell=True).decode("utf-8")
-    ip = ".".join(ip.split(".")[-2:])
+    # ip = ".".join(ip.split(".")[-2:])
 
     # Write lines of text.
     draw.text((x, top + 0), hostname, font=font1, fill=255)
