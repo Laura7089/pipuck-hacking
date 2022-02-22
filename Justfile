@@ -8,11 +8,11 @@ export ANSIBLE_HOST_KEY_CHECKING := "False"
 play playbook="./playbooks/default.yml":
     ansible-playbook -i {{ INVENTORY }} {{ playbook }}
 
-# Run an arbitrary command
+# Run an arbitrary command with ansible
 shell +CMD:
     ansible -i {{ INVENTORY }} all -a "{{ CMD }}"
 
-# Generate an inventory
+# Generate an ansible inventory
 inv target_subnet=SUBNET_CMD:
     #!/bin/bash
     set -eo pipefail
@@ -43,7 +43,7 @@ inv target_subnet=SUBNET_CMD:
     rm -f {{ INVENTORY }}
     echo "$changes" | xargs -I {} sh -c "printf '{} ansible_ssh_user=pi ansible_ssh_pass=raspberry\n' >> {{ INVENTORY }}"
 
-# Take an image of an SD
+# Take an image of a connected media
 snap device outfile="./rpi.img":
     @# From https://stackoverflow.com/questions/965053/extract-filename-and-extension-in-bash
     @if [[ "{{ extension(outfile) }}" != "img" ]]; then \
