@@ -4,7 +4,7 @@ INVENTORY := "./inventory.ini"
 SUBNET_CMD := "$(ip -o -f inet addr show wlan0 | awk '/scope global/ {print $4}')"
 
 # Run an ansible playbook against the hosts (host key checking disabled)
-playbook playbook="./playbook.yml" inv=INVENTORY:
+playbook playbook="./playbooks/default.yml" inv=INVENTORY:
     ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -i {{inv}} {{playbook}}
 
 # Run an arbitrary command
