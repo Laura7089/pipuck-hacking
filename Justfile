@@ -3,16 +3,16 @@ set positional-arguments
 INVENTORY := "./inventory.ini"
 SUBNET_CMD := "$(ip -o -f inet addr show wlan0 | awk '/scope global/ {print $4}')"
 
-# Run an ansible playbook against the hosts (host key checking disabled)
-playbook playbook="./playbooks/default.yml" inv=INVENTORY:
+# Run an ansible playbook
+play playbook="./playbooks/default.yml" inv=INVENTORY:
     ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -i {{inv}} {{playbook}}
 
 # Run an arbitrary command
 shell cmd="echo 'Hello, world'" inv=INVENTORY:
     ANSIBLE_HOST_KEY_CHECKING=False ansible -i {{inv}} all -a "{{cmd}}"
 
-# Interactively generate an inventory based on diffing nmap output
-inventory target_subnet=SUBNET_CMD file=INVENTORY:
+# Generate an inventory
+inv target_subnet=SUBNET_CMD file=INVENTORY:
     #!/bin/bash
     set -eo pipefail
 
