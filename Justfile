@@ -23,7 +23,7 @@ inventory search file=INVENTORY:
         rm $before
         rm $after
     }
-    trap 0 cleanup
+    trap cleanup 0
 
     # from https://unix.stackexchange.com/questions/181676/output-only-the-ip-addresses-of-the-online-machines-with-nmap
     printf "Turn off any pucks you want to add to your inventory.\n"
@@ -35,7 +35,7 @@ inventory search file=INVENTORY:
     nmap -sn -n {{search}} -oG - | awk '/Up$/{print $2}' > $after
     changes=$(comm -13 $before $after)
     if [[ -z "$changes" ]]; then
-        printf "No new network devices..."
+        printf "Error: No new network devices!\n"
         exit 1
     fi
     echo "$changes"
