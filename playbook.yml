@@ -1,0 +1,10 @@
+- hosts: all
+  gather_facts: no
+
+  tasks:
+    - name: copy script to pi
+      copy:
+        src: "./scripts/oled-ip.py"
+        dest: "/tmp/oled-ip.py"
+    - name: exec script
+      shell: "python3 /tmp/oled-ip.py"
