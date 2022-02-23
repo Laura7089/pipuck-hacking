@@ -1,5 +1,8 @@
-- hosts: all
-  name: install pip packages globally
+- name: pipuck-specific setup
+  include: ./pi_gen_rip.yml
+
+- name: install pip packages globally
+  hosts: all
   become: yes
 
   tasks:
@@ -10,7 +13,7 @@
           - luma.oled
         state: present
 
-- hosts: all
-
+- name: install ros2
+  hosts: all
   roles:
     - { role: laura7089.ros2 }
