@@ -29,6 +29,7 @@ build {
 
   provisioner "ansible" {
     playbook_file = "${var.playbook}"
+    galaxy_file = "./requirements.yml"
+    ssh_authorized_key_file = "/home/laura/.ssh/packer.pub"
   }
-
 }
