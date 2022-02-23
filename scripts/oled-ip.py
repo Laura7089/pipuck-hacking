@@ -5,6 +5,8 @@ Display hostname and IP address.
 """
 
 import subprocess
+from os import listdir
+from sys import exit
 
 from luma.core.error import DeviceNotFoundError
 from luma.core.interface.serial import i2c
@@ -12,13 +14,18 @@ from luma.core.render import canvas
 from luma.oled.device import ssd1306
 from PIL import ImageFont
 
-try:
-    device = ssd1306(i2c(port=3, address=0x3C), width=128, height=32, rotate=0)
-except:
-    device = ssd1306(i2c(port=13, address=0x3D),
-                     width=128,
-                     height=32,
-                     rotate=0)
+i2c_buses = [int(f[4:]) for f in listdir("/dev/") if "i2c" in f]
+
+for port in i2c_buses:
+    try:
+        device = ssd1306(i2c(port=port, address=0x3C), width=128, height=32, rotate=0)
+        break
+    except:
+        continue
+
+if device is None:
+    print("I2C bus not found")
+    exit(1)
 
 device.persist = True
 
