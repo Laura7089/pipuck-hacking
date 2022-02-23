@@ -16,3 +16,6 @@
 [submodule "playbooks/laura7089.ros2"]
 	path = playbooks/laura7089.ros2
 	url = https://github.com/Laura7089/ros2-ansible.git
+[submodule "tools/luma-examples"]
+	path = tools/luma-examples
+	url = https://github.com/rm-hull/luma.examples.git
