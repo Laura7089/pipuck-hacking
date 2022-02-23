@@ -2,9 +2,7 @@
 set -ex
 
 HOSTNAME_FILE="/etc/hostname"
-CURRENT_HOSTNAME=$(cat $HOSTNAME_FILE || echo "")
-# Trick borrowed from https://stackoverflow.com/questions/369758/how-to-trim-whitespace-from-a-bash-variable
-CURRENT_HOSTNAME=$(echo "$CURRENT_HOSTNAME" | xargs)
+CURRENT_HOSTNAME=$(hostnamectl hostname)
 
 # If hostname is not "pi-puck" and not blank, don't change it
 if [ "$CURRENT_HOSTNAME" != "pi-puck" ] && [ -n "$CURRENT_HOSTNAME" ]; then
@@ -17,4 +15,5 @@ fs_uuid=$(lsblk -no UUID "$root_dev")
 uuid_part=$(echo "$fs_uuid" | cut -d "-" -f 2)
 
 hostname="pi-$uuid_part"
-echo "$hostname" | tee $HOSTNAME_FILE
+echo "Setting hostname to '$hostname'..."
+hostnamectl hostname "$hostname"
