@@ -18,5 +18,12 @@
 
 - name: install ros2
   hosts: all
+
+  vars:
+    ros2_archive: "../ros2-foxy-20210902-linux-focal-arm64.tar.bz2"
+
   roles:
-    - { role: laura7089.ros2 }
+    - role: laura7089.ros2
+      ros2_source: local
+      ros2_local_archive: "{{ ros2_archive }}"
+      rosdep_install: no
