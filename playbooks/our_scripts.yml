@@ -32,13 +32,17 @@
         src: "../scripts/oled-ip.py"
         dest: "/usr/bin/oledstatus"
         mode: 0755
-    - name: copy service to pi
-      copy:
-        src: "../scripts/oledstatus.service"
-        dest: "/etc/systemd/system/oledstatus.service"
+      notify:
+        - copy service to pi
     - name: enable and start service
       systemd:
         name: oledstatus.service
         state: started
         daemon_reload: yes
         enabled: yes
+
+  handlers:
+    - name: copy service to pi
+      copy:
+        src: "../scripts/oledstatus.service"
+        dest: "/etc/systemd/system/oledstatus.service"
