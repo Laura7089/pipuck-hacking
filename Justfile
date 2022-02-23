@@ -59,6 +59,7 @@ snap device outfile="./rpi.img":
 # Run a packer target
 image target="./packer/from_raspios_remote.pkr.hcl" +args="": _ssh_key
     sudo packer build {{args}} "{{target}}"
+    sudo ./tools/pishrink/pishrink.sh ./output-pipuck/image
 
 # Build an image from scratch
 pigen:
