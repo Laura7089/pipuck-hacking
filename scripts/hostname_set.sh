@@ -1,5 +1,5 @@
 #!/bin/sh
-set -eox pipefail
+set -ex
 
 HOSTNAME_FILE="/etc/hostname"
 CURRENT_HOSTNAME=$(cat $HOSTNAME_FILE || echo "")
