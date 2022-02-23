@@ -1,0 +1,81 @@
+# vi: set ft=yaml.ansible:
+- name: apt config
+  hosts: all
+  become: yes
+
+  vars:
+    pipuck_gen: "../tools/pi-gen-yrl/stage2+pi-puck/00-configure-apt"
+
+  tasks:
+    - name: add pi-puck apt repo key
+      apt_key:
+        data: "{{ item }}"
+        state: present
+      with_file: ["{{ pipuck_gen }}/files/pi-puck.gpg.key"]
+
+    - name: add pi-puck apt repo
+      apt_repo:
+        repo: "{{ item }}"
+        state: present
+      with_file: ["{{ pipuck_gen }}/files/pi-puck.list"]
+
+    - name: apt dist upgrade
+      apt:
+        upgrade: dist
+        update_cache: yes
+
+- name: pi-puck core
+  hosts: all
+  become: yes
+
+  vars:
+    pipuck_gen: "../tools/pi-gen-yrl/stage2+pi-puck/01-pi-puck-core"
+
+  tasks:
+    - name: pi puck core packages
+      apt:
+        name: "{{ item }}"
+        state: present
+      with_file: ["{{ pipuck_gen }}/00-packages"]
+
+    - name: boot config additions
+      blockinfile:
+        path: /boot/config.txt
+        block: "{{ item }}"
+        marker: ""
+      with_file: ["{{ pipuck_gen }}/files/config.txt"]
+
+    - name: i2c config
+      copy:
+        src: "{{ pipuck_gen }}/files/i2c-dev.conf"
+        dest: "/etc/modules-load.d/i2c-dev.conf"
+        mode: 0644
+
+- name: boot files
+  hosts: all
+  become: yes
+
+  vars:
+    pipuck_gen: "../tools/pi-gen-yrl/stage2+pi-puck/02-pi-puck-boot-files"
+
+  tasks:
+    - name: boot files
+      with_items:
+        - "{{ pipuck_gen }}/files/e-puck_id"
+        - "{{ pipuck_gen }}/files/pi-puck_id"
+        - "{{ pipuck_gen }}/files/hostname"
+        - "{{ pipuck_gen }}/files/wpa_supplicant.conf"
+
+- name: useful packages
+  hosts: all
+  become: yes
+
+  vars:
+    pipuck_gen: "../tools/pi-gen-yrl/stage2+pi-puck/03-useful-packages"
+
+  tasks:
+    - name: install packages
+      apt:
+        name: "{{ item.replace('\n', ' ') }}"
+        state: present
+      with_file: ["{{ pipuck_gen }}/00-packages"]

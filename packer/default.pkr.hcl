@@ -1,5 +1,5 @@
 variable "playbook" {
-  default = "./playbooks/provision.yml"
+  default = "./playbooks/full_provision.yml"
   type    = string
 }
 

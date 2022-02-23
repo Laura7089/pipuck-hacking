@@ -1,4 +1,0 @@
-- hosts: all
-
-  roles:
-    - { role: laura7089.ros2 }
