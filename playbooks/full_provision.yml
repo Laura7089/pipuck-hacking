@@ -1,6 +1,9 @@
 - name: pipuck-specific setup
   import_playbook: ./pi_gen_rip.yml
 
+- name: our custom scripts
+  import_playbook: ./our_scripts.yml
+
 - name: install pip packages globally
   hosts: all
   become: yes

@@ -1,0 +1,44 @@
+- name: custom hostname script
+  hosts: all
+  become: yes
+  gather_facts: no
+
+  tasks:
+    - name: copy script to machine
+      copy:
+        src: "../scripts/hostname_set.sh"
+        dest: "/usr/bin/hostname_set"
+        mode: 0755
+    - name: link into startup
+      file:
+        src: "/usr/bin/hostname_set"
+        dest: "/etc/init.d/hostname_set"
+        state: link
+      notify:
+        - run script
+
+  handlers:
+    - name: run script
+      cmd: "/usr/bin/hostname_set"
+
+- name: oled status
+  hosts: all
+  gather_facts: no
+  become: yes
+
+  tasks:
+    - name: copy script to pi
+      copy:
+        src: "../scripts/oled-ip.py"
+        dest: "/usr/bin/oledstatus"
+        mode: 0755
+    - name: copy service to pi
+      copy:
+        src: "../scripts/oledstatus.service"
+        dest: "/etc/systemd/system/oledstatus.service"
+    - name: enable and start service
+      systemd:
+        name: oledstatus.service
+        state: started
+        daemon_reload: yes
+        enabled: yes
