@@ -1,2 +1,5 @@
 inventory.ini
 output-pipuck
+*.img
+*.log
+*.iso
