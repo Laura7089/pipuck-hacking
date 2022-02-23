@@ -1,9 +1,12 @@
 #!/bin/sh
+set -eox pipefail
 
 HOSTNAME_FILE="/etc/hostname"
+CURRENT_HOSTNAME=$(cat $HOSTNAME_FILE || echo "")
 
-if [ -n "$(cat $HOSTNAME_FILE)" ] || [ "$(cat $HOSTNAME_FILE)" = "pi-puck" ]; then
-    echo "Hostname already set to $(cat $HOSTNAME_FILE)"
+# If hostname is not "pi-puck" and not blank, don't change it
+if [ "$CURRENT_HOSTNAME" = "pi-puck" ] || [ -n "$CURRENT_HOSTNAME" ]; then
+    echo "Hostname already set to '$CURRENT_HOSTNAME'"
     exit 0
 fi
 
@@ -12,4 +15,4 @@ fs_uuid=$(lsblk -no UUID "$root_dev")
 uuid_part=$(echo "$fs_uuid" | cut -d "-" -f 2)
 
 hostname="pi-$uuid_part"
-echo "$hostname" > HOSTNAME_FILE
+echo "$hostname" | tee $HOSTNAME_FILE
