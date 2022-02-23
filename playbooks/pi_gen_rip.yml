@@ -60,6 +60,9 @@
 
   tasks:
     - name: boot files
+      copy:
+        src: "{{ item }}"
+        dest: "/boot/"
       with_items:
         - "{{ pipuck_gen }}/files/e-puck_id"
         - "{{ pipuck_gen }}/files/pi-puck_id"

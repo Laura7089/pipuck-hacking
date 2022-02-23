@@ -1,5 +1,5 @@
 - name: pipuck-specific setup
-  include: ./pi_gen_rip.yml
+  import_playbook: ./pi_gen_rip.yml
 
 - name: install pip packages globally
   hosts: all
