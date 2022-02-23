@@ -1,4 +1,16 @@
 - hosts: all
+  name: install pip packages globally
+  become: yes
+
+  tasks:
+    - name: packages
+      pip:
+        name:
+          # https://pypi.org/project/luma.oled/
+          - luma.oled
+        state: present
+
+- hosts: all
 
   roles:
     - { role: laura7089.ros2 }
