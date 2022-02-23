@@ -3,3 +3,4 @@ output-pipuck
 *.img
 *.log
 *.iso
+.packer_ssh*

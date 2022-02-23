@@ -3,6 +3,11 @@ variable "playbook" {
   type    = string
 }
 
+variable "ssh_key" {
+  default = "./.packer_ssh.key"
+  type = string
+}
+
 variable "upstream_iso_url" {
   default = "https://downloads.raspberrypi.org/raspios_lite_armhf/images/raspios_lite_armhf-2022-01-28/2022-01-28-raspios-bullseye-armhf-lite.zip"
   type    = string
@@ -30,6 +35,12 @@ build {
   provisioner "ansible" {
     playbook_file = "${var.playbook}"
     galaxy_file = "./requirements.yml"
-    ssh_authorized_key_file = "/home/laura/.ssh/packer.pub"
+    ssh_authorized_key_file = "${var.ssh_key}.pub"
+    ansible_ssh_extra_args = [
+      "-o",
+      "IdentitiesOnly=yes",
+      "-i",
+      "${var.ssh_key}",
+    ]
   }
 }

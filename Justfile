@@ -57,5 +57,10 @@ snap device outfile="./rpi.img":
     sudo ./tools/pishrink/pishrink.sh {{ outfile }}
 
 # Generate an image with packer
-image +args="./packer/default.pkr.hcl":
+image +args="./packer/default.pkr.hcl": _ssh_key
     sudo packer build {{args}}
+
+# Generate a temporary ssh keyfile
+_ssh_key dest="./.packer_ssh.key":
+    rm -f "{{dest}}"
+    ssh-keygen -f "{{dest}}" -N '""'
