@@ -5,7 +5,7 @@ SUBNET_CMD := `ip -o -f inet addr show wlan0 | awk '/scope global/ {print $4}'`
 export ANSIBLE_HOST_KEY_CHECKING := "False"
 
 # Run an ansible playbook
-play playbook="./playbooks/default.yml":
+play playbook:
     ansible-playbook -i {{ INVENTORY }} {{ playbook }}
 
 # Run an arbitrary command with ansible
