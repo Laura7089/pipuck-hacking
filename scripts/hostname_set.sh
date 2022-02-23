@@ -3,9 +3,11 @@ set -eox pipefail
 
 HOSTNAME_FILE="/etc/hostname"
 CURRENT_HOSTNAME=$(cat $HOSTNAME_FILE || echo "")
+# Trick borrowed from https://stackoverflow.com/questions/369758/how-to-trim-whitespace-from-a-bash-variable
+CURRENT_HOSTNAME=$(echo "$CURRENT_HOSTNAME" | xargs)
 
 # If hostname is not "pi-puck" and not blank, don't change it
-if [ "$CURRENT_HOSTNAME" = "pi-puck" ] || [ -n "$CURRENT_HOSTNAME" ]; then
+if [ "$CURRENT_HOSTNAME" != "pi-puck" ] && [ -n "$CURRENT_HOSTNAME" ]; then
     echo "Hostname already set to '$CURRENT_HOSTNAME'"
     exit 0
 fi
