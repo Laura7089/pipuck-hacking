@@ -56,9 +56,13 @@ snap device outfile="./rpi.img":
     sudo dd if={{ device }} of={{ outfile }} status=progress bs=64k
     sudo ./tools/pishrink/pishrink.sh {{ outfile }}
 
-# Generate an image with packer
-image +args="./packer/default.pkr.hcl": _ssh_key
-    sudo packer build {{args}}
+# Run a packer target
+image target="./packer/from_raspios_remote.pkr.hcl" +args="": _ssh_key
+    sudo packer build {{args}} "{{target}}"
+
+# Build an image from scratch
+pigen:
+    cd ./tools/pi-gen-yrl && ./build.sh
 
 # Generate a temporary ssh keyfile
 _ssh_key dest="./.packer_ssh.key":
