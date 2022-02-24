@@ -19,7 +19,7 @@
 
   handlers:
     - name: run script
-      cmd: "/usr/bin/hostname_set"
+      shell: "/usr/bin/hostname_set"
 
 - name: oled status
   hosts: all

@@ -1,19 +1,23 @@
 set positional-arguments := true
 
-INVENTORY := "./inventory.ini"
 SUBNET_CMD := `ip -o -f inet addr show wlan0 | awk '/scope global/ {print $4}'`
 export ANSIBLE_HOST_KEY_CHECKING := "False"
 
+INVENTORY := "./inventory.ini"
+TOOLS_DIR := "./tools"
+PACKER_DIR := "./packer"
+export PACKER_PLUGIN_PATH := "./.packer.d/plugins"
+
 # Run an ansible playbook
-play playbook:
+aplay playbook:
     ansible-playbook -i {{ INVENTORY }} {{ playbook }}
 
 # Run an arbitrary command with ansible
-shell +CMD:
+ashell +CMD:
     ansible -i {{ INVENTORY }} all -a "{{ CMD }}"
 
 # Generate an ansible inventory
-inv target_subnet=SUBNET_CMD:
+ainv target_subnet=SUBNET_CMD:
     #!/bin/bash
     set -eo pipefail
 
@@ -44,7 +48,7 @@ inv target_subnet=SUBNET_CMD:
     echo "$changes" | xargs -I {} sh -c "printf '{} ansible_ssh_user=pi ansible_ssh_pass=raspberry\n' >> {{ INVENTORY }}"
 
 # Take an image of a connected media
-snap device outfile="./rpi.img":
+snap device outfile="./rpi.img": && (shrink outfile)
     @# From https://stackoverflow.com/questions/965053/extract-filename-and-extension-in-bash
     @if [[ "{{ extension(outfile) }}" != "img" ]]; then \
         printf "WARNING: '{{ outfile }}' is not a .img file!\n"; \
@@ -54,13 +58,58 @@ snap device outfile="./rpi.img":
         fi \
     fi
     sudo dd if={{ device }} of={{ outfile }} status=progress bs=64k
-    sudo ./tools/pishrink/pishrink.sh {{ outfile }}
 
-# Generate an image with packer
-image +args="./packer/default.pkr.hcl": _ssh_key
-    sudo packer build {{args}}
+# Shrink an image's size
+shrink image="./rpi.img":
+    sudo {{TOOLS_DIR}}/pishrink/pishrink.sh {{ image }}
 
-# Generate a temporary ssh keyfile
-_ssh_key dest="./.packer_ssh.key":
-    rm -f "{{dest}}"
-    ssh-keygen -f "{{dest}}" -N '""'
+# Flash an image file to a device
+flash device image="./rpi.img":
+    sudo dd if={{image}} of={{device}} status=progress bs=64k
+
+# Run a packer target
+image target="./packer/from_raspios_remote.pkr.hcl" +args="": _packer_plugin_arm && (shrink "./output-pipuck/image")
+    sudo PACKER_PLUGIN_PATH="{{PACKER_PLUGIN_PATH}}" packer build {{args}} "{{target}}"
+
+# Run a packer target in docker
+dimage dockerbin="podman" target="./packer/from_raspios_remote.pkr.hcl" +args="": _packer_plugin_arm && (shrink "./output-pipuck/image")
+    sudo {{dockerbin}} run \
+        -e PACKER_PLUGIN_PATH="/mnt/{{PACKER_PLUGIN_PATH}}" \
+        -v $PWD:/mnt \
+        -w /mnt \
+        hashicorp/packer build {{args}} "/mnt/{{target}}"
+
+# Build an image from scratch
+pigen:
+    cd {{TOOLS_DIR}}/pi-gen-yrl && ./build.sh
+
+# netctl: switch to correct wifi network
+wifi action="lab" dev="wlan0" network="rts_lab":
+    #!/bin/bash
+    set -euxo pipefail
+
+    if [[ "{{action}}" == "lab" ]]; then
+        sudo systemctl stop netctl-auto@{{dev}}
+        sudo netctl start {{network}}
+    else
+        sudo netctl stop {{network}}
+        sudo systemctl start netctl-auto@{{dev}}
+    fi
+
+# Build the packer-plugin-arm-image binary
+_packer_plugin_arm:
+    #!/bin/bash
+    set -euxo pipefail
+
+    if [[ -f "{{PACKER_PLUGIN_PATH}}/packer-plugin-arm-image" ]]; then
+        echo "Plugin already built..."
+        exit 0
+    fi
+
+    (
+        cd "{{TOOLS_DIR}}/packer-plugin-arm-image"
+        export "GOPATH=$(mktemp -d)"
+        go generate ./...
+        go build -o packer-plugin-arm-image .
+    )
+    install -Dm 0755 "{{TOOLS_DIR}}/packer-plugin-arm-image/packer-plugin-arm-image" "{{PACKER_PLUGIN_PATH}}/packer-plugin-arm-image"
