@@ -1,8 +1,12 @@
 set positional-arguments := true
 
-INVENTORY := "./inventory.ini"
 SUBNET_CMD := `ip -o -f inet addr show wlan0 | awk '/scope global/ {print $4}'`
 export ANSIBLE_HOST_KEY_CHECKING := "False"
+
+INVENTORY := "./inventory.ini"
+TOOLS_DIR := "./tools"
+PACKER_DIR := "./packer"
+export PACKER_PLUGIN_PATH := "./.packer.d/plugins"
 
 # Run an ansible playbook
 aplay playbook:
@@ -57,19 +61,27 @@ snap device outfile="./rpi.img": && (shrink outfile)
 
 # Shrink an image's size
 shrink image="./rpi.img":
-    sudo ./tools/pishrink/pishrink.sh {{ image }}
+    sudo {{TOOLS_DIR}}/pishrink/pishrink.sh {{ image }}
 
 # Flash an image file to a device
 flash device image="./rpi.img":
     sudo dd if={{image}} of={{device}} status=progress bs=64k
 
 # Run a packer target
-image target="./packer/from_raspios_remote.pkr.hcl" +args="": (shrink "./output-pipuck/image")
-    sudo packer build {{args}} "{{target}}"
+image target="./packer/from_raspios_remote.pkr.hcl" +args="": _packer_plugin_arm && (shrink "./output-pipuck/image")
+    sudo PACKER_PLUGIN_PATH="{{PACKER_PLUGIN_PATH}}" packer build {{args}} "{{target}}"
+
+# Run a packer target in docker
+dimage dockerbin="podman" target="./packer/from_raspios_remote.pkr.hcl" +args="": _packer_plugin_arm && (shrink "./output-pipuck/image")
+    sudo {{dockerbin}} run \
+        -e PACKER_PLUGIN_PATH="/mnt/{{PACKER_PLUGIN_PATH}}" \
+        -v $PWD:/mnt \
+        -w /mnt \
+        hashicorp/packer build {{args}} "/mnt/{{target}}"
 
 # Build an image from scratch
 pigen:
-    cd ./tools/pi-gen-yrl && ./build.sh
+    cd {{TOOLS_DIR}}/pi-gen-yrl && ./build.sh
 
 # netctl: switch to correct wifi network
 wifi action="lab" dev="wlan0" network="rts_lab":
@@ -83,3 +95,21 @@ wifi action="lab" dev="wlan0" network="rts_lab":
         sudo netctl stop {{network}}
         sudo systemctl start netctl-auto@{{dev}}
     fi
+
+# Build the packer-plugin-arm-image binary
+_packer_plugin_arm:
+    #!/bin/bash
+    set -euxo pipefail
+
+    if [[ -f "{{PACKER_PLUGIN_PATH}}/packer-plugin-arm-image" ]]; then
+        echo "Plugin already built..."
+        exit 0
+    fi
+
+    (
+        cd "{{TOOLS_DIR}}/packer-plugin-arm-image"
+        export "GOPATH=$(mktemp -d)"
+        go generate ./...
+        go build -o packer-plugin-arm-image .
+    )
+    install -Dm 0755 "{{TOOLS_DIR}}/packer-plugin-arm-image/packer-plugin-arm-image" "{{PACKER_PLUGIN_PATH}}/packer-plugin-arm-image"
