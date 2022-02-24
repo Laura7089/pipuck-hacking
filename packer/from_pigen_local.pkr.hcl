@@ -33,12 +33,5 @@ build {
   provisioner "ansible" {
     playbook_file = "${var.playbook}"
     galaxy_file = "./requirements.yml"
-    ssh_authorized_key_file = "${var.ssh_key}.pub"
-    ansible_ssh_extra_args = [
-      "-o",
-      "IdentitiesOnly=yes",
-      "-i",
-      "${var.ssh_key}",
-    ]
   }
 }

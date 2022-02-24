@@ -64,14 +64,9 @@ flash device image="./rpi.img":
     sudo dd if={{image}} of={{device}} status=progress bs=64k
 
 # Run a packer target
-image target="./packer/from_raspios_remote.pkr.hcl" +args="": _ssh_key && (shrink "./output-pipuck/image")
+image target="./packer/from_raspios_remote.pkr.hcl" +args="": (shrink "./output-pipuck/image")
     sudo packer build {{args}} "{{target}}"
 
 # Build an image from scratch
 pigen:
     cd ./tools/pi-gen-yrl && ./build.sh
-
-# Generate a temporary ssh keyfile
-_ssh_key dest="./.packer_ssh.key":
-    rm -f "{{dest}}"
-    ssh-keygen -f "{{dest}}" -N '""'
