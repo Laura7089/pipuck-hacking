@@ -5,3 +5,4 @@ output-pipuck
 *.iso
 .packer_ssh*
 *.tar*
+.packer.d
