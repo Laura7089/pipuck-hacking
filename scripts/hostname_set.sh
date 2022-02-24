@@ -16,4 +16,4 @@ uuid_part=$(echo "$fs_uuid" | cut -d "-" -f 2)
 
 hostname="pi-$uuid_part"
 echo "Setting hostname to '$hostname'..."
-hostnamectl hostname "$hostname"
+hostnamectl set-hostname "$hostname"
