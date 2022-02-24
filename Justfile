@@ -5,15 +5,15 @@ SUBNET_CMD := `ip -o -f inet addr show wlan0 | awk '/scope global/ {print $4}'`
 export ANSIBLE_HOST_KEY_CHECKING := "False"
 
 # Run an ansible playbook
-play playbook:
+aplay playbook:
     ansible-playbook -i {{ INVENTORY }} {{ playbook }}
 
 # Run an arbitrary command with ansible
-shell +CMD:
+ashell +CMD:
     ansible -i {{ INVENTORY }} all -a "{{ CMD }}"
 
 # Generate an ansible inventory
-inv target_subnet=SUBNET_CMD:
+ainv target_subnet=SUBNET_CMD:
     #!/bin/bash
     set -eo pipefail
 
@@ -44,7 +44,7 @@ inv target_subnet=SUBNET_CMD:
     echo "$changes" | xargs -I {} sh -c "printf '{} ansible_ssh_user=pi ansible_ssh_pass=raspberry\n' >> {{ INVENTORY }}"
 
 # Take an image of a connected media
-snap device outfile="./rpi.img":
+snap device outfile="./rpi.img": && (shrink outfile)
     @# From https://stackoverflow.com/questions/965053/extract-filename-and-extension-in-bash
     @if [[ "{{ extension(outfile) }}" != "img" ]]; then \
         printf "WARNING: '{{ outfile }}' is not a .img file!\n"; \
@@ -54,12 +54,18 @@ snap device outfile="./rpi.img":
         fi \
     fi
     sudo dd if={{ device }} of={{ outfile }} status=progress bs=64k
-    sudo ./tools/pishrink/pishrink.sh {{ outfile }}
+
+# Shrink an image's size
+shrink image="./rpi.img":
+    sudo ./tools/pishrink/pishrink.sh {{ image }}
+
+# Flash an image file to a device
+flash device image="./rpi.img":
+    sudo dd if={{image}} of={{device}} status=progress bs=64k
 
 # Run a packer target
-image target="./packer/from_raspios_remote.pkr.hcl" +args="": _ssh_key
+image target="./packer/from_raspios_remote.pkr.hcl" +args="": _ssh_key && (shrink "./output-pipuck/image")
     sudo packer build {{args}} "{{target}}"
-    sudo ./tools/pishrink/pishrink.sh ./output-pipuck/image
 
 # Build an image from scratch
 pigen:
