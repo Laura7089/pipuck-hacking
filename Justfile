@@ -70,3 +70,16 @@ image target="./packer/from_raspios_remote.pkr.hcl" +args="": (shrink "./output-
 # Build an image from scratch
 pigen:
     cd ./tools/pi-gen-yrl && ./build.sh
+
+# netctl: switch to correct wifi network
+wifi action="lab" dev="wlan0" network="rts_lab":
+    #!/bin/bash
+    set -euxo pipefail
+
+    if [[ "{{action}}" == "lab" ]]; then
+        sudo systemctl stop netctl-auto@{{dev}}
+        sudo netctl start {{network}}
+    else
+        sudo netctl stop {{network}}
+        sudo systemctl start netctl-auto@{{dev}}
+    fi
