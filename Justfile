@@ -78,14 +78,6 @@ flash device image="./rpi.img":
 image target="./packer/from_raspios_remote.pkr.hcl" +args="": _packer_plugin_arm && (shrink "./output-pipuck/image")
     sudo PACKER_PLUGIN_PATH="{{ PACKER_PLUGIN_PATH }}" packer build {{ args }} "{{ target }}"
 
-# Run a packer target in docker
-dimage dockerbin="podman" target="./packer/from_raspios_remote.pkr.hcl" +args="": _packer_plugin_arm && (shrink "./output-pipuck/image")
-    sudo {{ dockerbin }} run \
-        -e PACKER_PLUGIN_PATH="/mnt/{{ PACKER_PLUGIN_PATH }}" \
-        -v $PWD:/mnt \
-        -w /mnt \
-        hashicorp/packer build {{ args }} "/mnt/{{ target }}"
-
 # Build an image from scratch
 pigen:
     cd {{ TOOLS_DIR }}/pi-gen-yrl && ./build.sh
