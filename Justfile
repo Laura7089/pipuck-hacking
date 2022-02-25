@@ -8,6 +8,10 @@ TOOLS_DIR := "./tools"
 PACKER_DIR := "./packer"
 export PACKER_PLUGIN_PATH := "./.packer.d/plugins"
 
+# Ssh into a host with fixes applied
+ssh host: _clear_known_hosts
+    ssh pi@{{ host }}
+
 # Run an ansible playbook
 aplay playbook +args="": _clear_known_hosts
     ansible-playbook -i {{ INVENTORY }} {{args}} {{ playbook }}
