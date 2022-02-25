@@ -92,7 +92,7 @@ pigen:
 
 # netctl: switch to correct wifi network
 wifi action="lab" network="rts_lab":
-    just wifi_{{ action }} network
+    just _wifi_{{ action }} network
 
 # netctl: switch to lab wifi
 _wifi_lab network="rts_lab":
