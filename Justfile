@@ -1,5 +1,6 @@
 set positional-arguments := true
 
+WIFI_DEV := `ip address | grep wl | head -n 1 | cut -d ": " -f 2`
 SUBNET_CMD := `ip -o -f inet addr show wlan0 | awk '/scope global/ {print $4}'`
 export ANSIBLE_HOST_KEY_CHECKING := "False"
 
@@ -9,19 +10,19 @@ PACKER_DIR := "./packer"
 export PACKER_PLUGIN_PATH := "./.packer.d/plugins"
 
 # Ssh into a host with fixes applied
-ssh host: _clear_known_hosts
+ssh host: _clear_known_hosts wifi_lab && wifi_off
     ssh pi@{{ host }}
 
 # Run an ansible playbook
-aplay playbook +args="": _clear_known_hosts
+aplay playbook +args="": _clear_known_hosts wifi_lab && wifi_off
     ansible-playbook -i {{ INVENTORY }} {{args}} {{ playbook }}
 
 # Run an arbitrary command with ansible
-ashell +CMD: _clear_known_hosts
+ashell +CMD: _clear_known_hosts wifi_lab && wifi_off
     ansible -i {{ INVENTORY }} all -a "{{ CMD }}"
 
 # Generate an ansible inventory
-ainv target_subnet=SUBNET_CMD:
+ainv target_subnet=SUBNET_CMD: wifi_lab && wifi_off
     #!/bin/bash
     set -eo pipefail
 
@@ -88,17 +89,18 @@ pigen:
     cd {{TOOLS_DIR}}/pi-gen-yrl && ./build.sh
 
 # netctl: switch to correct wifi network
-wifi action="lab" dev="wlan0" network="rts_lab":
-    #!/bin/bash
-    set -euxo pipefail
+wifi action="lab" network="rts_lab":
+    just wifi_{{action}} network
 
-    if [[ "{{action}}" == "lab" ]]; then
-        sudo systemctl stop netctl-auto@{{dev}}
-        sudo netctl start {{network}}
-    else
-        sudo netctl stop {{network}}
-        sudo systemctl start netctl-auto@{{dev}}
-    fi
+# netctl: switch to lab wifi
+_wifi_lab network="rts_lab":
+    sudo systemctl stop netctl-auto@{{WIFI_DEV}}
+    sudo netctl start {{network}}
+
+# netctl: turn off lab wifi
+_wifi_off network="rts_lab":
+    sudo netctl stop {{network}}
+    sudo systemctl start netctl-auto@{{WIFI_DEV}}
 
 # Build the packer-plugin-arm-image binary
 _packer_plugin_arm:
