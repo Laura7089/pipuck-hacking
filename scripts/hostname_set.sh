@@ -2,7 +2,7 @@
 set -ex
 
 HOSTNAME_FILE="/etc/hostname"
-CURRENT_HOSTNAME=$(hostnamectl hostname)
+CURRENT_HOSTNAME=$(cat $HOSTNAME_FILE || echo "")
 
 # If hostname is not "pi-puck" and not blank, don't change it
 if [ "$CURRENT_HOSTNAME" != "pi-puck" ] && [ -n "$CURRENT_HOSTNAME" ]; then
