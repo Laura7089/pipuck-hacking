@@ -1,7 +1,9 @@
 set positional-arguments := true
 
-WIFI_DEV := `ip address | grep wl | head -n 1 | cut -d ": " -f 2`
-SUBNET_CMD := `ip -o -f inet addr show wlan0 | awk '/scope global/ {print $4}'`
+# Tries to guess the wifi device
+WIFI_DEV := `ip address | grep wl | head -n 1 | cut -d ":" -f 2 | xargs`
+# Gets the subnet on the wifi device
+SUBNET_CMD := `ip -o -f inet addr show {{WIFI_DEV}} | awk '/scope global/ {print $4}'`
 export ANSIBLE_HOST_KEY_CHECKING := "False"
 
 INVENTORY := "./inventory.ini"
@@ -10,19 +12,19 @@ PACKER_DIR := "./packer"
 export PACKER_PLUGIN_PATH := "./.packer.d/plugins"
 
 # Ssh into a host with fixes applied
-ssh host: _clear_known_hosts wifi_lab && wifi_off
+ssh host: _clear_known_hosts _wifi_lab && _wifi_off
     ssh pi@{{ host }}
 
 # Run an ansible playbook
-aplay playbook +args="": _clear_known_hosts wifi_lab && wifi_off
+aplay playbook +args="": _clear_known_hosts _wifi_lab && _wifi_off
     ansible-playbook -i {{ INVENTORY }} {{args}} {{ playbook }}
 
 # Run an arbitrary command with ansible
-ashell +CMD: _clear_known_hosts wifi_lab && wifi_off
+ashell +CMD: _clear_known_hosts _wifi_lab && _wifi_off
     ansible -i {{ INVENTORY }} all -a "{{ CMD }}"
 
 # Generate an ansible inventory
-ainv target_subnet=SUBNET_CMD: wifi_lab && wifi_off
+ainv target_subnet=SUBNET_CMD: _wifi_lab && _wifi_off
     #!/bin/bash
     set -eo pipefail
 
