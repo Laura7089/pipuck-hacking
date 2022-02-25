@@ -3,22 +3,17 @@ variable "playbook" {
   type    = string
 }
 
-variable "ssh_key" {
-  default = "./.packer_ssh.key"
-  type = string
-}
-
 variable "target_image_size" {
   default = 4294967296
   type    = number
 }
 
 variable "local_iso_url" {
-  type    = string
+  type = string
 }
 
 variable "local_iso_checksum" {
-  type    = string
+  type = string
 }
 
 source "arm-image" "pipuck" {
@@ -30,8 +25,15 @@ source "arm-image" "pipuck" {
 build {
   sources = ["source.arm-image.pipuck"]
 
-  provisioner "ansible" {
+  provisioner "shell" {
+    inline = [
+      "apt-get -y update",
+      "apt-get install -y ansible"
+    ]
+  }
+
+  provisioner "ansible-local" {
     playbook_file = "${var.playbook}"
-    galaxy_file = "./requirements.yml"
+    galaxy_file   = "./requirements.yml"
   }
 }

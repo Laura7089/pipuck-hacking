@@ -2,6 +2,7 @@
 - name: apt config
   hosts: all
   become: yes
+  gather_facts: no
 
   vars:
     pipuck_gen: "../tools/pi-gen-yrl/stage2+pi-puck/00-configure-apt"
@@ -9,15 +10,15 @@
   tasks:
     - name: add pi-puck apt repo key
       apt_key:
-        data: "{{ item }}"
+        url: "https://raw.githubusercontent.com/yorkrobotlab/pi-gen/376f464c2ab6fd43aa5939f1db86150c5f4e36ae/stage2%2Bpi-puck/00-configure-apt/files/pi-puck.gpg.key"
         state: present
-      with_file: ["{{ pipuck_gen }}/files/pi-puck.gpg.key"]
 
     - name: add pi-puck apt repo
-      apt_repo:
-        repo: "{{ item }}"
+      lineinfile:
+        line: "deb http://www.cs.york.ac.uk/pi-puck/debian/ buster main"
+        path: "/etc/apt/sources.list.d/pi-puck.list"
+        create: yes
         state: present
-      with_file: ["{{ pipuck_gen }}/files/pi-puck.list"]
 
     - name: apt dist upgrade
       apt:
@@ -27,33 +28,35 @@
 - name: pi-puck core
   hosts: all
   become: yes
+  gather_facts: no
 
   vars:
     pipuck_gen: "../tools/pi-gen-yrl/stage2+pi-puck/01-pi-puck-core"
 
   tasks:
-    - name: pi puck core packages
+    - name: pi puck core package
       apt:
-        name: "{{ item }}"
+        name: pi-puck-core
         state: present
-      with_file: ["{{ pipuck_gen }}/00-packages"]
 
     - name: boot config additions
       blockinfile:
         path: /boot/config.txt
-        block: "{{ item }}"
+        block: |
+          [all]
+          include pi-puck-config.txt
         marker: ""
-      with_file: ["{{ pipuck_gen }}/files/config.txt"]
 
     - name: i2c config
       copy:
-        src: "{{ pipuck_gen }}/files/i2c-dev.conf"
+        content: i2c-dev
         dest: "/etc/modules-load.d/i2c-dev.conf"
         mode: 0644
 
 - name: boot files
   hosts: all
   become: yes
+  gather_facts: no
 
   vars:
     pipuck_gen: "../tools/pi-gen-yrl/stage2+pi-puck/02-pi-puck-boot-files"
@@ -72,6 +75,7 @@
 - name: useful packages
   hosts: all
   become: yes
+  gather_facts: no
 
   vars:
     pipuck_gen: "../tools/pi-gen-yrl/stage2+pi-puck/03-useful-packages"

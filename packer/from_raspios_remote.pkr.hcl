@@ -1,13 +1,3 @@
-variable "playbook" {
-  default = "./playbooks/full_provision.yml"
-  type    = string
-}
-
-variable "ssh_key" {
-  default = "./.packer_ssh.key"
-  type = string
-}
-
 variable "upstream_iso_url" {
   default = "https://downloads.raspberrypi.org/raspios_lite_armhf/images/raspios_lite_armhf-2022-01-28/2022-01-28-raspios-bullseye-armhf-lite.zip"
   type    = string
@@ -32,8 +22,16 @@ source "arm-image" "pipuck" {
 build {
   sources = ["source.arm-image.pipuck"]
 
-  provisioner "ansible" {
-    playbook_file = "${var.playbook}"
-    galaxy_file = "./requirements.yml"
+  provisioner "shell" {
+    inline = [
+      "apt-get -y update",
+      "apt-get install -y ansible",
+    ]
+  }
+
+  provisioner "ansible-local" {
+    playbook_dir = "./playbooks"
+    galaxy_file   = "./playbooks/requirements.yml"
+    playbook_file = "./playbooks/full_provision.yml"
   }
 }

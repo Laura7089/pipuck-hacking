@@ -7,6 +7,7 @@
 - name: install pip packages globally
   hosts: all
   become: yes
+  gather_facts: no
 
   tasks:
     - name: packages
@@ -18,6 +19,7 @@
 
 - name: install ros2
   hosts: all
+  gather_facts: no
 
   vars:
     ros2_archive: "../ros2-foxy-20210902-linux-focal-arm64.tar.bz2"

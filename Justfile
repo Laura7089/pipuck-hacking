@@ -8,12 +8,16 @@ TOOLS_DIR := "./tools"
 PACKER_DIR := "./packer"
 export PACKER_PLUGIN_PATH := "./.packer.d/plugins"
 
+# Ssh into a host with fixes applied
+ssh host: _clear_known_hosts
+    ssh pi@{{ host }}
+
 # Run an ansible playbook
-aplay playbook:
-    ansible-playbook -i {{ INVENTORY }} {{ playbook }}
+aplay playbook +args="": _clear_known_hosts
+    ansible-playbook -i {{ INVENTORY }} {{args}} {{ playbook }}
 
 # Run an arbitrary command with ansible
-ashell +CMD:
+ashell +CMD: _clear_known_hosts
     ansible -i {{ INVENTORY }} all -a "{{ CMD }}"
 
 # Generate an ansible inventory
@@ -113,3 +117,13 @@ _packer_plugin_arm:
         go build -o packer-plugin-arm-image .
     )
     install -Dm 0755 "{{TOOLS_DIR}}/packer-plugin-arm-image/packer-plugin-arm-image" "{{PACKER_PLUGIN_PATH}}/packer-plugin-arm-image"
+
+# Clear the hosts in INVENTORY from ~/.ssh/known_hosts
+_clear_known_hosts inv=INVENTORY:
+    #!/bin/bash
+    set -euxo pipefail
+
+    while read line; do
+        ip=$(echo "$line" | cut -d " " -f 1)
+        sed -i "/$ip/d" ~/.ssh/known_hosts
+    done < {{inv}}
