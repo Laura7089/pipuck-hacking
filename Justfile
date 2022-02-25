@@ -12,19 +12,19 @@ PACKER_DIR := "./packer"
 export PACKER_PLUGIN_PATH := "./.packer.d/plugins"
 
 # Ssh into a host with fixes applied
-ssh host: _clear_known_hosts _wifi_lab && _wifi_off
+ssh host: _clear_known_hosts _wifi_lab
     ssh pi@{{ host }}
 
 # Run an ansible playbook
-aplay playbook +args="": _clear_known_hosts _wifi_lab && _wifi_off
+aplay playbook +args="": _clear_known_hosts _wifi_lab
     ansible-playbook -i {{ INVENTORY }} {{args}} {{ playbook }}
 
 # Run an arbitrary command with ansible
-ashell +CMD: _clear_known_hosts _wifi_lab && _wifi_off
+ashell +CMD: _clear_known_hosts _wifi_lab
     ansible -i {{ INVENTORY }} all -a "{{ CMD }}"
 
 # Generate an ansible inventory
-ainv target_subnet=SUBNET_CMD: _wifi_lab && _wifi_off
+ainv target_subnet=SUBNET_CMD: _wifi_lab
     #!/bin/bash
     set -eo pipefail
 
