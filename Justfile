@@ -11,9 +11,9 @@ TOOLS_DIR := "./tools"
 PACKER_DIR := "./packer"
 export PACKER_PLUGIN_PATH := "./.packer.d/plugins"
 
-# Ssh into a host with fixes applied
-ssh host: _clear_known_hosts _wifi_lab
-    ssh pi@{{ host }}
+# Ssh into a pi with fixes applied
+ssh pi_address: _clear_known_hosts _wifi_lab
+    sshpass -p raspberry ssh -oStrictHostKeyChecking=no pi@{{ pi_address }}
 
 # Run an ansible playbook
 aplay playbook +args="": _clear_known_hosts _wifi_lab
