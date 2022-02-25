@@ -14,10 +14,10 @@
         url: https://curl.se/ca/cacert.pem
         dest: /usr/share/ca-certificates/local/ca-bundle.crt
         validate_certs: no
-      handle: update ca-certificates
+      handle: update certs
 
   handlers:
-    - name:
+    - name: update certs
       shell:
         command: update-ca-certificates
 
