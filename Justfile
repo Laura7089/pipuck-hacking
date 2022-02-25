@@ -1,9 +1,9 @@
 set positional-arguments := true
 
 # Tries to guess the wifi device
-WIFI_DEV := `ip address | grep wl | head -n 1 | cut -d ":" -f 2 | xargs`
+export WIFI_DEV := `ip address | grep wl | head -n 1 | cut -d ':' -f 2 | xargs`
 # Gets the subnet on the wifi device
-SUBNET_CMD := `ip -o -f inet addr show {{WIFI_DEV}} | awk '/scope global/ {print $4}'`
+SUBNET_CMD := "$(ip -o -f inet addr show $WIFI_DEV | awk '/scope global/ {print $4}')"
 export ANSIBLE_HOST_KEY_CHECKING := "False"
 
 INVENTORY := "./inventory.ini"
@@ -98,11 +98,13 @@ wifi action="lab" network="rts_lab":
 _wifi_lab network="rts_lab":
     sudo systemctl stop netctl-auto@{{WIFI_DEV}}
     sudo netctl start {{network}}
+    sleep 2
 
 # netctl: turn off lab wifi
 _wifi_off network="rts_lab":
     sudo netctl stop {{network}}
     sudo systemctl start netctl-auto@{{WIFI_DEV}}
+    sleep 2
 
 # Build the packer-plugin-arm-image binary
 _packer_plugin_arm:
