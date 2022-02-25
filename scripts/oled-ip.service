@@ -6,7 +6,7 @@ Wants=network-online.target
 [Service]
 Type=oneshot
 RemainAfterExit=yes
-ExecStart=/usr/bin/oledstatus
+ExecStart=/usr/bin/oled-ip
 
 [Install]
 WantedBy=multi-user.target
