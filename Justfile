@@ -84,19 +84,17 @@ pigen:
 
 # netctl: switch to correct wifi network
 wifi action="lab" network="rts_lab":
-    just _wifi_{{ action }} network
+    just _wifi_{{ action }} {{ network }}
 
 # netctl: switch to lab wifi
 _wifi_lab network="rts_lab":
     sudo systemctl stop netctl-auto@{{ WIFI_DEV }}
     sudo netctl start {{ network }}
-    sleep 2
 
 # netctl: turn off lab wifi
 _wifi_off network="rts_lab":
     sudo netctl stop {{ network }}
     sudo systemctl start netctl-auto@{{ WIFI_DEV }}
-    sleep 2
 
 # Build the packer-plugin-arm-image binary
 _packer_plugin_arm:
