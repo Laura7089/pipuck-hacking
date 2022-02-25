@@ -14,8 +14,10 @@
         state: present
 
     - name: add pi-puck apt repo
-      apt_repo:
-        repo: "deb http://www.cs.york.ac.uk/pi-puck/debian/ buster main"
+      lineinfile:
+        line: "deb http://www.cs.york.ac.uk/pi-puck/debian/ buster main"
+        path: "/etc/apt/sources.list.d/pi-puck.list"
+        create: yes
         state: present
 
     - name: apt dist upgrade

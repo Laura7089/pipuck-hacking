@@ -1,8 +1,3 @@
-variable "playbook" {
-  default = "./playbooks/full_provision.yml"
-  type    = string
-}
-
 variable "upstream_iso_url" {
   default = "https://downloads.raspberrypi.org/raspios_lite_armhf/images/raspios_lite_armhf-2022-01-28/2022-01-28-raspios-bullseye-armhf-lite.zip"
   type    = string
@@ -30,12 +25,13 @@ build {
   provisioner "shell" {
     inline = [
       "apt-get -y update",
-      "apt-get install -y ansible"
+      "apt-get install -y ansible",
     ]
   }
 
   provisioner "ansible-local" {
-    playbook_file = "${var.playbook}"
-    galaxy_file   = "./requirements.yml"
+    playbook_dir = "./playbooks"
+    galaxy_file   = "./playbooks/requirements.yml"
+    playbook_file = "./playbooks/full_provision.yml"
   }
 }
