@@ -1,27 +1,30 @@
 set positional-arguments := true
 
-SUBNET_CMD := `ip -o -f inet addr show wlan0 | awk '/scope global/ {print $4}'`
-export ANSIBLE_HOST_KEY_CHECKING := "False"
+# Tries to guess the wifi device
+export WIFI_DEV := `ip address | grep wl | head -n 1 | cut -d ':' -f 2 | xargs`
 
+# Gets the subnet on the wifi device
+SUBNET_CMD := "$(ip -o -f inet addr show $WIFI_DEV | awk '/scope global/ {print $4}')"
+export ANSIBLE_HOST_KEY_CHECKING := "False"
 INVENTORY := "./inventory.ini"
 TOOLS_DIR := "./tools"
 PACKER_DIR := "./packer"
 export PACKER_PLUGIN_PATH := "./.packer.d/plugins"
 
-# Ssh into a host with fixes applied
-ssh host: _clear_known_hosts
-    ssh pi@{{ host }}
+# Ssh into a pi with fixes applied
+ssh pi_address: _clear_known_hosts _wifi_lab
+    sshpass -p raspberry ssh -oStrictHostKeyChecking=no pi@{{ pi_address }}
 
 # Run an ansible playbook
-aplay playbook +args="": _clear_known_hosts
-    ansible-playbook -i {{ INVENTORY }} {{args}} {{ playbook }}
+aplay playbook +args="": _clear_known_hosts _wifi_lab
+    ansible-playbook -i {{ INVENTORY }} {{ args }} {{ playbook }}
 
 # Run an arbitrary command with ansible
-ashell +CMD: _clear_known_hosts
+ashell +CMD: _clear_known_hosts _wifi_lab
     ansible -i {{ INVENTORY }} all -a "{{ CMD }}"
 
 # Generate an ansible inventory
-ainv target_subnet=SUBNET_CMD:
+ainv target_subnet=SUBNET_CMD: _wifi_lab
     #!/bin/bash
     set -eo pipefail
 
@@ -65,58 +68,61 @@ snap device outfile="./rpi.img": && (shrink outfile)
 
 # Shrink an image's size
 shrink image="./rpi.img":
-    sudo {{TOOLS_DIR}}/pishrink/pishrink.sh {{ image }}
+    sudo {{ TOOLS_DIR }}/pishrink/pishrink.sh {{ image }}
 
 # Flash an image file to a device
 flash device image="./rpi.img":
-    sudo dd if={{image}} of={{device}} status=progress bs=64k
+    sudo dd if={{ image }} of={{ device }} status=progress bs=64k
 
 # Run a packer target
 image target="./packer/from_raspios_remote.pkr.hcl" +args="": _packer_plugin_arm && (shrink "./output-pipuck/image")
-    sudo PACKER_PLUGIN_PATH="{{PACKER_PLUGIN_PATH}}" packer build {{args}} "{{target}}"
+    sudo PACKER_PLUGIN_PATH="{{ PACKER_PLUGIN_PATH }}" packer build {{ args }} "{{ target }}"
 
 # Run a packer target in docker
 dimage dockerbin="podman" target="./packer/from_raspios_remote.pkr.hcl" +args="": _packer_plugin_arm && (shrink "./output-pipuck/image")
-    sudo {{dockerbin}} run \
-        -e PACKER_PLUGIN_PATH="/mnt/{{PACKER_PLUGIN_PATH}}" \
+    sudo {{ dockerbin }} run \
+        -e PACKER_PLUGIN_PATH="/mnt/{{ PACKER_PLUGIN_PATH }}" \
         -v $PWD:/mnt \
         -w /mnt \
-        hashicorp/packer build {{args}} "/mnt/{{target}}"
+        hashicorp/packer build {{ args }} "/mnt/{{ target }}"
 
 # Build an image from scratch
 pigen:
-    cd {{TOOLS_DIR}}/pi-gen-yrl && ./build.sh
+    cd {{ TOOLS_DIR }}/pi-gen-yrl && ./build.sh
 
 # netctl: switch to correct wifi network
-wifi action="lab" dev="wlan0" network="rts_lab":
-    #!/bin/bash
-    set -euxo pipefail
+wifi action="lab" network="rts_lab":
+    just wifi_{{ action }} network
 
-    if [[ "{{action}}" == "lab" ]]; then
-        sudo systemctl stop netctl-auto@{{dev}}
-        sudo netctl start {{network}}
-    else
-        sudo netctl stop {{network}}
-        sudo systemctl start netctl-auto@{{dev}}
-    fi
+# netctl: switch to lab wifi
+_wifi_lab network="rts_lab":
+    sudo systemctl stop netctl-auto@{{ WIFI_DEV }}
+    sudo netctl start {{ network }}
+    sleep 2
+
+# netctl: turn off lab wifi
+_wifi_off network="rts_lab":
+    sudo netctl stop {{ network }}
+    sudo systemctl start netctl-auto@{{ WIFI_DEV }}
+    sleep 2
 
 # Build the packer-plugin-arm-image binary
 _packer_plugin_arm:
     #!/bin/bash
     set -euxo pipefail
 
-    if [[ -f "{{PACKER_PLUGIN_PATH}}/packer-plugin-arm-image" ]]; then
+    if [[ -f "{{ PACKER_PLUGIN_PATH }}/packer-plugin-arm-image" ]]; then
         echo "Plugin already built..."
         exit 0
     fi
 
     (
-        cd "{{TOOLS_DIR}}/packer-plugin-arm-image"
+        cd "{{ TOOLS_DIR }}/packer-plugin-arm-image"
         export "GOPATH=$(mktemp -d)"
         go generate ./...
         go build -o packer-plugin-arm-image .
     )
-    install -Dm 0755 "{{TOOLS_DIR}}/packer-plugin-arm-image/packer-plugin-arm-image" "{{PACKER_PLUGIN_PATH}}/packer-plugin-arm-image"
+    install -Dm 0755 "{{ TOOLS_DIR }}/packer-plugin-arm-image/packer-plugin-arm-image" "{{ PACKER_PLUGIN_PATH }}/packer-plugin-arm-image"
 
 # Clear the hosts in INVENTORY from ~/.ssh/known_hosts
 _clear_known_hosts inv=INVENTORY:
@@ -126,4 +132,4 @@ _clear_known_hosts inv=INVENTORY:
     while read line; do
         ip=$(echo "$line" | cut -d " " -f 1)
         sed -i "/$ip/d" ~/.ssh/known_hosts
-    done < {{inv}}
+    done < {{ inv }}
