@@ -53,5 +53,5 @@ with canvas(device) as draw:
     ip = ".".join(ip.split(".")[-2:])
 
     # Write lines of text.
-    draw.text((x, top + 23), ip, font=font1, fill=255)
-    draw.text((x, top + 0), hostname, font=font2, fill=255)
+    draw.text((x, top + 0), ip, font=font1, fill=255)
+    draw.text((x, top + 23), hostname, font=font2, fill=255)
