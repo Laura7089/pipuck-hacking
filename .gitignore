@@ -4,6 +4,7 @@
 *.tar*
 .packer.d
 .packer_ssh*
+elfshaker_data
 epuck_ros2_out
 inventory.ini
 output-pipuck
