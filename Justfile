@@ -2,14 +2,19 @@ set positional-arguments := true
 
 # Tries to guess the wifi device
 export WIFI_DEV := `ip address | grep wl | head -n 1 | cut -d ':' -f 2 | xargs`
-
 # Gets the subnet on the wifi device
 SUBNET_CMD := "$(ip -o -f inet addr show $WIFI_DEV | awk '/scope global/ {print $4}')"
+
 export ANSIBLE_HOST_KEY_CHECKING := "False"
+
+# Directories
 INVENTORY := "./inventory.ini"
 TOOLS_DIR := "./tools"
 PACKER_DIR := "./packer"
 export PACKER_PLUGIN_PATH := "./.packer.d/plugins"
+EPUCK_ROS2_CC_PATH := TOOLS_DIR + "/epuck_ros2/installation/cross_compile"
+
+DOCKER_BIN := "sudo docker"
 
 # Ssh into a pi with fixes applied
 ssh pi_address: _clear_known_hosts _wifi_lab
@@ -20,8 +25,8 @@ aplay playbook +args="": _clear_known_hosts _wifi_lab
     ansible-playbook -i {{ INVENTORY }} {{ args }} {{ playbook }}
 
 # Run an arbitrary command with ansible
-ashell +CMD: _clear_known_hosts _wifi_lab
-    ansible -i {{ INVENTORY }} all -a "{{ CMD }}"
+ashell +command: _clear_known_hosts _wifi_lab
+    ansible -i {{ INVENTORY }} all -a "{{ command }}"
 
 # Generate an ansible inventory
 ainv target_subnet=SUBNET_CMD: _wifi_lab
@@ -78,7 +83,7 @@ flash device image="./rpi.img":
 image target="./packer/from_raspios_remote.pkr.hcl" +args="": _packer_plugin_arm && (shrink "./output-pipuck/image")
     sudo PACKER_PLUGIN_PATH="{{ PACKER_PLUGIN_PATH }}" packer build {{ args }} "{{ target }}"
 
-# Build an image from scratch
+# Build an image from scratch with pi-gen
 pigen:
     cd {{ TOOLS_DIR }}/pi-gen-yrl && ./build.sh
 
@@ -123,3 +128,34 @@ _clear_known_hosts inv=INVENTORY:
         ip=$(echo "$line" | cut -d " " -f 1)
         sed -i "/$ip/d" ~/.ssh/known_hosts
     done < {{ inv }}
+
+# Cross-compile epuck_ros2
+epuckros2 pi_img="./rpi.img" out="./epuck_ros2_out" pkg="ros2topic" loop="0": _epuckros2_di (_mount_pi_image pi_img out loop "2") && (_umount_pi_image out loop)
+    {{ DOCKER_BIN }} run \
+        --rm \
+        --device /dev/fuse \
+        --cap-add SYS_ADMIN \
+        --security-opt apparmor:unconfined \
+        -v "$PWD/{{ out }}:/home/develop/rootfs:ro" \
+        -v "$PWD/{{ EPUCK_ROS2_CC_PATH }}/ros2_ws:/home/develop/ros2_ws" \
+        --entrypoint /bin/bash \
+        rpi_cross_compile \
+        -ieuxo pipefail -c 'export ROS_DISTRO=foxy && cross-initialize && cross-colcon-build --packages-up-to {{ pkg }}' \
+        || echo "Failed, hiding error so cleanup runs..."
+
+# Build the docker image for epuck_ros2 cross compiling
+_epuckros2_di:
+    cd "{{ EPUCK_ROS2_CC_PATH }}" && \
+        {{ DOCKER_BIN }} build -t rpi_cross_compile -f Dockerfile .
+
+# Mount a pi image
+_mount_pi_image image out loop_num part_num:
+    sudo partx -va -n {{ part_num }}:{{ part_num }} "{{ image }}"
+    mkdir -p "{{ out }}"
+    sudo mount /dev/loop{{ loop_num }}p{{ part_num }} "{{ out }}"
+
+# Unmount a pi image
+_umount_pi_image out loop_num:
+    sudo umount "{{ out }}"
+    sudo partx -d /dev/loop{{ loop_num }}
+    sudo losetup -d /dev/loop{{ loop_num }}

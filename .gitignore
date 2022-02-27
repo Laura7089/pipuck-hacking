@@ -1,8 +1,9 @@
-inventory.ini
-output-pipuck
 *.img
-*.log
 *.iso
-.packer_ssh*
+*.log
 *.tar*
 .packer.d
+.packer_ssh*
+epuck_ros2_out
+inventory.ini
+output-pipuck
