@@ -17,8 +17,8 @@ EPUCK_ROS2_CC_PATH := TOOLS_DIR + "/epuck_ros2/installation/cross_compile"
 DOCKER_BIN := "sudo docker"
 
 # Ssh into a pi with fixes applied
-ssh pi_address: _clear_known_hosts _wifi_lab
-    sshpass -p raspberry ssh -oStrictHostKeyChecking=no pi@{{ pi_address }}
+ssh pi_address user="pi" pass="raspberry": _clear_known_hosts _wifi_lab
+    sshpass -p "{{ pass }}" ssh -oStrictHostKeyChecking=no "{{ user }}@{{ pi_address }}"
 
 # Run an ansible playbook
 aplay playbook +args="": _clear_known_hosts _wifi_lab
@@ -37,8 +37,8 @@ ainv target_subnet=SUBNET_CMD: _wifi_lab
     after=$(mktemp)
 
     cleanup() {
-        rm $before
-        rm $after
+        rm -vf $before
+        rm -vf $after
     }
     trap cleanup 0
 
@@ -73,7 +73,7 @@ snap device outfile="./rpi.img": && (shrink outfile)
 
 # Shrink an image's size
 shrink image="./rpi.img":
-    sudo {{ TOOLS_DIR }}/pishrink/pishrink.sh {{ image }}
+    sudo {{ TOOLS_DIR }}/pishrink/pishrink.sh -v {{ image }}
 
 # Flash an image file to a device
 flash device image="./rpi.img":
@@ -84,12 +84,12 @@ flash_host device image tmp_mount="/mnt/sd": (flash device image)
     #!/bin/bash
     set -euxo pipefail
 
-    HOSTNAME_FILE="{{ tmp_mount }}/hostname"
+    HOSTNAME_FILE="{{ tmp_mount }}/etc/hostname"
 
-    mount {{ device }} {{ tmp_mount }}
+    sudo mount -v {{ device }} {{ tmp_mount }}
     fs_uuid=$(lsblk -no UUID "/dev/sda2" | cut -d "-" -f 2)
-    echo "puck-$fs_uuid" > $HOSTNAME_FILE
-    umount {{ tmp_mount }}
+    sudo sh -c "echo puck-$fs_uuid > $HOSTNAME_FILE"
+    sudo umount -v {{ tmp_mount }}
 
 # Run a packer target
 image target="./packer/from_raspios_remote.pkr.hcl" +args="": _packer_plugin_arm && (shrink "./output-pipuck/image")
@@ -129,7 +129,7 @@ _packer_plugin_arm:
         go generate ./...
         go build -o packer-plugin-arm-image .
     )
-    install -Dm 0755 "{{ TOOLS_DIR }}/packer-plugin-arm-image/packer-plugin-arm-image" "{{ PACKER_PLUGIN_PATH }}/packer-plugin-arm-image"
+    install -vDm 0755 "{{ TOOLS_DIR }}/packer-plugin-arm-image/packer-plugin-arm-image" "{{ PACKER_PLUGIN_PATH }}/packer-plugin-arm-image"
 
 # Clear the hosts in INVENTORY from ~/.ssh/known_hosts
 _clear_known_hosts inv=INVENTORY:
@@ -143,17 +143,16 @@ _clear_known_hosts inv=INVENTORY:
 
 # Cross-compile epuck_ros2
 epuckros2 pi_img="./rpi.img" out="./epuck_ros2_out" pkg="ros2topic" loop="0": _epuckros2_di (_mount_pi_image pi_img out loop "2") && (_umount_pi_image out loop)
-    {{ DOCKER_BIN }} run \
+    -{{ DOCKER_BIN }} run \
         --rm \
         --device /dev/fuse \
         --cap-add SYS_ADMIN \
-        --security-opt apparmor:unconfined \
+        --security-opt apparmor=unconfined \
         -v "$PWD/{{ out }}:/home/develop/rootfs:ro" \
         -v "$PWD/{{ EPUCK_ROS2_CC_PATH }}/ros2_ws:/home/develop/ros2_ws" \
         --entrypoint /bin/bash \
         rpi_cross_compile \
-        -ieuxo pipefail -c 'export ROS_DISTRO=foxy && cross-initialize && cross-colcon-build --packages-up-to {{ pkg }}' \
-        || echo "Failed, hiding error so cleanup runs..."
+        -ieuxo pipefail -c 'export ROS_DISTRO=foxy && cross-initialize && cross-colcon-build --packages-up-to {{ pkg }}'
 
 # Build the docker image for epuck_ros2 cross compiling
 _epuckros2_di:
@@ -163,11 +162,11 @@ _epuckros2_di:
 # Mount a pi image
 _mount_pi_image image out loop_num part_num:
     sudo partx -va -n {{ part_num }}:{{ part_num }} "{{ image }}"
-    mkdir -p "{{ out }}"
-    sudo mount /dev/loop{{ loop_num }}p{{ part_num }} "{{ out }}"
+    mkdir -vp "{{ out }}"
+    sudo mount -v /dev/loop{{ loop_num }}p{{ part_num }} "{{ out }}"
 
 # Unmount a pi image
 _umount_pi_image out loop_num:
-    sudo umount "{{ out }}"
-    sudo partx -d /dev/loop{{ loop_num }}
-    sudo losetup -d /dev/loop{{ loop_num }}
+    sudo umount -v "{{ out }}"
+    sudo partx -vd /dev/loop{{ loop_num }}
+    sudo losetup -vd /dev/loop{{ loop_num }}
