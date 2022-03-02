@@ -170,7 +170,7 @@ _mnt target mountpoint loop_num part_num:
 
 # Unmount an image or device (dynamic dispatch)
 _umnt mountpoint loop_num:
-    if [[ "$(mount | grep {{ mountpoint }})" =~ '/loop/' ]]; then \
+    if [[ "$(mount | grep {{ mountpoint }})" =~ '/dev/loop' ]]; then \
         just _umnt_pimg "{{ mountpoint }}" {{ loop_num }}; \
     else \
         just _umnt_dev "{{ mountpoint }}"; \
@@ -178,20 +178,23 @@ _umnt mountpoint loop_num:
 
 # Mount a device
 _mnt_dev device mountpoint _loop part:
+    mkdir -vp "{{ mountpoint }}"
     sudo mount {{ device }}{{ part }} "{{ mountpoint }}"
 
 # Unmount a device
 _umnt_dev mountpoint:
     sudo umount "{{ mountpoint }}"
 
-# Mount a pi image
-_mnt_pimg image mountpoint loop_num part_num:
-    sudo partx -va -n {{ part_num }}:{{ part_num }} "{{ image }}"
+# Mount a pi image (assumes partition layout)
+_mnt_pimg image mountpoint loop_num _part:
+    sudo partx -va "{{ image }}"
     mkdir -vp "{{ mountpoint }}"
-    sudo mount -v /dev/loop{{ loop_num }}p{{ part_num }} "{{ mountpoint }}"
+    sudo mount -v /dev/loop{{ loop_num }}p2 "{{ mountpoint }}"
+    -sudo mount -v /dev/loop{{ loop_num }}p1 "{{ mountpoint }}/boot"
 
-# Unmount a pi image
+# Unmount a pi image (assumes partition layout)
 _umnt_pimg mountpoint loop_num:
+    -sudo umount -v "{{ mountpoint }}/boot"
     sudo umount -v "{{ mountpoint }}"
     sudo partx -vd /dev/loop{{ loop_num }}
     sudo losetup -vd /dev/loop{{ loop_num }}
