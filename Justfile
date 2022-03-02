@@ -79,16 +79,16 @@ isnap device outfile="./rpi.img": && (ishrink outfile)
 ishrink image="./rpi.img":
     sudo {{ TOOLS_DIR }}/pishrink/pishrink.sh -v {{ image }}
 
-# Flash a pi sd card, patch the hostname
+# Flash a medium, patch the hostname
 iflash device image="./rpi.img": (_flash_raw device image) (hostset device + "2")
 
 # Flash an image file to a device
 _flash_raw device image="./rpi.img":
     sudo dd if={{ image }} of={{ device }} status=progress bs=64k
 
-# Patch a hostname onto a (mounted) medium or image
-hostset prefix="/mnt/sd" hostname=PUCK_HOSTNAME_GEN:
-    echo {{ hostname }} | sudo tee "{{ prefix }}/etc/hostname"
+# Patch a hostname onto a medium or image
+hostset target mountpoint="/mnt/sd" hostname=PUCK_HOSTNAME_GEN: (_mnt target mountpoint "0" "2") && (_umnt mountpoint "0")
+    echo {{ hostname }} | sudo tee "{{ mountpoint }}/etc/hostname"
 
 # Run a packer target
 packer target="./packer/from_raspios_remote.pkr.hcl" +args="": _packer_plugin_arm && (ishrink "./output-pipuck/image")
@@ -141,7 +141,7 @@ _clear_known_hosts inv=INVENTORY:
     done < {{ inv }}
 
 # Cross-compile epuck_ros2
-epuckros2 pi_img="./rpi.img" out="./epuck_ros2_out" pkg="ros2topic" loop="0": _epuckros2_di (_mnt_pimg pi_img out loop "2") && (_umnt_pimg out loop)
+epuckros2 pi_fs="./rpi.img" out="./epuck_ros2_out" pkg="ros2topic" loop="0": _epuckros2_di (_mnt pi_fs out loop "2") && (_umnt out loop)
     @# Ignore failure so that cleanup still runs
     -{{ DOCKER_BIN }} run \
         --rm \
@@ -158,6 +158,26 @@ epuckros2 pi_img="./rpi.img" out="./epuck_ros2_out" pkg="ros2topic" loop="0": _e
 _epuckros2_di:
     cd "{{ EPUCK_ROS2_CC_PATH }}" && \
         {{ DOCKER_BIN }} build -t rpi_cross_compile -f Dockerfile .
+
+# Mount an image or device (dynamic dispatch)
+_mnt target mountpoint loop_num part_num:
+    just _mnt_{{ if parent_directory(target) == "/dev" { "dev" } else { "pimg" } }} "{{ target }}" "{{ mountpoint }}" {{ loop_num }} {{ part_num }}
+
+# Unmount an image or device (dynamic dispatch)
+_umnt mountpoint loop_num:
+    if [[ "$(mount | grep {{ mountpoint }})" =~ '/loop/' ]]; then \
+        just _umnt_pimg "{{ mountpoint }}" {{ loop_num }}; \
+    else \
+        just _umnt_dev "{{ mountpoint }}"; \
+    fi
+
+# Mount a device
+_mnt_dev device mountpoint _loop part:
+    sudo mount {{ device }}{{ part }} "{{ mountpoint }}"
+
+# Unmount a device
+_umnt_dev mountpoint:
+    sudo umount "{{ mountpoint }}"
 
 # Mount a pi image
 _mnt_pimg image mountpoint loop_num part_num:
