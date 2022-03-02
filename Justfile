@@ -81,21 +81,9 @@ shrink image="./rpi.img":
 flash device image="./rpi.img":
     sudo dd if={{ image }} of={{ device }} status=progress bs=64k
 
-# Flash a media with the hostname patched in
-flash_host device image tmp_mount="/mnt/sd": (flash device image)
-    #!/bin/bash
-    set -euxo pipefail
-
-    HOSTNAME_FILE="{{ tmp_mount }}/etc/hostname"
-
-    UUID=$(uuidgen)
-    e2fsck -f /dev/sda2
-    tune2fs /dev/sda2 -U ${UUID}
-    mount {{ device }} {{ tmp_mount }}
-
-    FS_UUID=$($UUID | cut -d "-" -f 2)
-    echo "puck-$FS_UUID" > $HOSTNAME_FILE
-    umount {{ tmp_mount }}
+# Patch a hostname into an image
+hostset image tmp_mount="/mnt/sd" hostname=("puck-" + `uuidgen | cut -d "-" -f 2`): (_mount_pi_image image tmp_mount "0" "2") && (_umount_pi_image tmp_mount "0")
+    echo {{ hostname }} | sudo tee "{{ tmp_mount }}/etc/hostname"
 
 # Run a packer target
 image target="./packer/from_raspios_remote.pkr.hcl" +args="": _packer_plugin_arm && (shrink "./output-pipuck/image")
@@ -115,7 +103,7 @@ _wifi_lab network="rts_lab":
     sudo netctl start {{ network }}
 
 # netctl: turn off lab wifi
-_wifi_off network="rts_lab":
+_wifi_reset network="rts_lab":
     sudo netctl stop {{ network }}
     sudo systemctl start netctl-auto@{{ WIFI_DEV }}
 
@@ -167,10 +155,10 @@ _epuckros2_di:
         {{ DOCKER_BIN }} build -t rpi_cross_compile -f Dockerfile .
 
 # Mount a pi image
-_mount_pi_image image out loop_num part_num:
+_mount_pi_image image mountpoint loop_num part_num:
     sudo partx -va -n {{ part_num }}:{{ part_num }} "{{ image }}"
-    mkdir -vp "{{ out }}"
-    sudo mount -v /dev/loop{{ loop_num }}p{{ part_num }} "{{ out }}"
+    mkdir -vp "{{ mountpoint }}"
+    sudo mount -v /dev/loop{{ loop_num }}p{{ part_num }} "{{ mountpoint }}"
 
 # Unmount a pi image
 _umount_pi_image mountpoint loop_num:
