@@ -12,6 +12,7 @@ export ANSIBLE_HOST_KEY_CHECKING := "False"
 # Directories
 INVENTORY := "./inventory.ini"
 TOOLS_DIR := "./tools"
+ARTS_DIR := "./artefacts"
 PACKER_DIR := "./packer"
 export PACKER_PLUGIN_PATH := PACKER_DIR + "/plugins"
 EPUCK_ROS2_CC_PATH := TOOLS_DIR + "/epuck_ros2/installation/cross_compile"
@@ -49,11 +50,11 @@ ainv target_subnet=SUBNET_CMD: _wifi_lab
     # from https://unix.stackexchange.com/questions/181676/output-only-the-ip-addresses-of-the-online-machines-with-nmap
     printf "Turn off any pucks you want to add to your inventory.\n"
     read -p "Press any key to resume..."
-    nmap -sn -n {{ target_subnet }} -oG - | awk '/Up$/{print $2}' > $before
+    nmap -sn -n {{ target_subnet }} -oG - | awk '/Up$/{print $2}' | tee $before
     printf "Turn on the pucks, then wait about 2 minutes.\n"
     read -p "Press any key to resume..."
     printf "\n\n"
-    nmap -sn -n {{ target_subnet }} -oG - | awk '/Up$/{print $2}' > $after
+    nmap -sn -n {{ target_subnet }} -oG - | awk '/Up$/{print $2}' | tee $after
     changes=$(comm -13 $before $after)
     if [[ -z "$changes" ]]; then
         printf "Error: No new network devices!\n"
@@ -61,10 +62,10 @@ ainv target_subnet=SUBNET_CMD: _wifi_lab
     fi
     echo "$changes"
     rm -vf {{ INVENTORY }}
-    echo "$changes" | xargs -I {} sh -c "printf '{} ansible_ssh_user=pi ansible_ssh_pass=raspberry\n' >> {{ INVENTORY }}"
+    echo "$changes" | xargs -I {} sh -c "printf '{} ansible_ssh_user=pi ansible_ssh_pass=raspberry\n' | tee -a {{ INVENTORY }}"
 
 # Take an image of a connected media
-isnap device outfile="./rpi.img": && (ishrink outfile)
+isnap device outfile=(ARTS_DIR + "/rpi.img"): && (ishrink outfile)
     @# From https://stackoverflow.com/questions/965053/extract-filename-and-extension-in-bash
     @if [[ "{{ extension(outfile) }}" != "img" ]]; then \
         printf "WARNING: '{{ outfile }}' is not a .img file!\n"; \
@@ -76,14 +77,14 @@ isnap device outfile="./rpi.img": && (ishrink outfile)
     sudo dd if={{ device }} of={{ outfile }} status=progress bs=64k
 
 # Shrink an image's size
-ishrink image="./rpi.img":
+ishrink image=(ARTS_DIR + "/rpi.img"):
     sudo {{ TOOLS_DIR }}/pishrink/pishrink.sh -v {{ image }}
 
 # Flash a medium, patch the hostname
-iflash device image="./rpi.img": (_flash_raw device image) (hostset device + "2")
+iflash device image=(ARTS_DIR + "rpi.img"): (_flash_raw device image) (hostset device + "2")
 
 # Flash an image file to a device
-_flash_raw device image="./rpi.img":
+_flash_raw device image=(ARTS_DIR + "/rpi.img"):
     sudo dd if={{ image }} of={{ device }} status=progress bs=64k
 
 # Patch a hostname onto a medium or image
@@ -91,7 +92,7 @@ hostset target mountpoint="/mnt/sd" hostname=PUCK_HOSTNAME_GEN: (_mnt target mou
     echo {{ hostname }} | sudo tee "{{ mountpoint }}/etc/hostname"
 
 # Run a packer target
-packer target="./packer/from_raspios_remote.pkr.hcl" +args="": _packer_plugin_arm && (ishrink "./output-pipuck/image")
+packer target=(PACKER_DIR + "/from_raspios_remote.pkr.hcl") +args="": _packer_plugin_arm && (ishrink ARTS_DIR + "/output-pipuck/image")
     sudo packer build {{ args }} "{{ target }}"
 
 # Build an image from scratch with pi-gen
@@ -128,7 +129,9 @@ _packer_plugin_arm:
         go generate ./...
         go build -o packer-plugin-arm-image .
     )
-    install -vDm 0755 "{{ TOOLS_DIR }}/packer-plugin-arm-image/packer-plugin-arm-image" "{{ PACKER_PLUGIN_PATH }}/packer-plugin-arm-image"
+    install -vDm 0755 \
+        "{{ TOOLS_DIR }}/packer-plugin-arm-image/packer-plugin-arm-image" \
+        "{{ PACKER_PLUGIN_PATH }}/packer-plugin-arm-image"
 
 # Clear the hosts in INVENTORY from ~/.ssh/known_hosts
 _clear_known_hosts inv=INVENTORY:
@@ -141,7 +144,7 @@ _clear_known_hosts inv=INVENTORY:
     done < {{ inv }}
 
 # Cross-compile epuck_ros2
-epuckros2 pi_fs="./rpi.img" out="./epuck_ros2_out" pkg="ros2topic" loop="0": _epuckros2_di (_mnt pi_fs out loop "2") && (_umnt out loop)
+epuckros2 pi_fs=(ARTS_DIR + "rpi.img") out=(ARTS_DIR + "/epuck_ros2_out") pkg="ros2topic" loop="0": _epuckros2_di (_mnt pi_fs out loop "2") && (_umnt out loop)
     @# Ignore failure so that cleanup still runs
     -{{ DOCKER_BIN }} run \
         --rm \
@@ -152,7 +155,8 @@ epuckros2 pi_fs="./rpi.img" out="./epuck_ros2_out" pkg="ros2topic" loop="0": _ep
         -v "$PWD/{{ EPUCK_ROS2_CC_PATH }}/ros2_ws:/home/develop/ros2_ws" \
         --entrypoint /bin/bash \
         rpi_cross_compile \
-        -ieuxo pipefail -c 'export ROS_DISTRO=foxy && cross-initialize && cross-colcon-build --packages-up-to {{ pkg }}'
+        -ieuxo pipefail -c \
+        'export ROS_DISTRO=foxy && cross-initialize && cross-colcon-build --packages-up-to {{ pkg }}'
 
 # Build the docker image for epuck_ros2 cross compiling
 _epuckros2_di:
@@ -161,7 +165,8 @@ _epuckros2_di:
 
 # Mount an image or device (dynamic dispatch)
 _mnt target mountpoint loop_num part_num:
-    just _mnt_{{ if parent_directory(target) == "/dev" { "dev" } else { "pimg" } }} "{{ target }}" "{{ mountpoint }}" {{ loop_num }} {{ part_num }}
+    just _mnt_{{ if parent_directory(target) == "/dev" { "dev" } else { "pimg" } }} \
+        "{{ target }}" "{{ mountpoint }}" {{ loop_num }} {{ part_num }}
 
 # Unmount an image or device (dynamic dispatch)
 _umnt mountpoint loop_num:
