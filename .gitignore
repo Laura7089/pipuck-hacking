@@ -1,8 +1,6 @@
+*.log
+.env
+epuck_ros2_out
 inventory.ini
 output-pipuck
-*.img
-*.log
-*.iso
-.packer_ssh*
-*.tar*
-.packer.d
+packer/plugins
