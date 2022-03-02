@@ -75,19 +75,21 @@ flash device image="./rpi.img":
     sudo dd if={{ image }} of={{ device }} status=progress bs=64k
 
 # Flash a media with the hostname patched in
-flash_host device image tmp_mount="/mnt/sd": (flash device image) #!/bin/bash
+flash_host device image tmp_mount="/mnt/sd": #(flash device image)
+    #!/bin/bash
     set -euxo pipefail
 
-    HOSTNAME_FILE="{{ tmp_mount }}/hostname"
-
+    HOSTNAME_FILE="{{ tmp_mount }}/etc/hostname"
     UUID=$(uuidgen)
-    e2fsck -f /dev/sda2
-    tune2fs /dev/sda2 -U ${UUID}
-    mount {{ device }} {{ tmp_mount }}
+    echo "${UUID}"
+    sudo e2fsck -f /dev/sda2
+    sudo tune2fs /dev/sda2 -U ${UUID}
+    sudo mount /dev/sda2 {{ tmp_mount }}
+    FS_UUID=$(echo $UUID | cut -d "-" -f 2)
+    echo puck-$FS_UUID | sudo tee "$HOSTNAME_FILE"
 
-    FS_UUID=$($UUID | cut -d "-" -f 2)
-    echo "puck-$FS_UUID" > $HOSTNAME_FILE
-    umount {{ tmp_mount }}
+    sudo umount {{ tmp_mount }}
+
 
 # Run a packer target
 image target="./packer/from_raspios_remote.pkr.hcl" +args="": _packer_plugin_arm && (shrink "./output-pipuck/image")
