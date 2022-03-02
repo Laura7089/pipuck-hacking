@@ -75,15 +75,18 @@ flash device image="./rpi.img":
     sudo dd if={{ image }} of={{ device }} status=progress bs=64k
 
 # Flash a media with the hostname patched in
-flash_host device image tmp_mount="/mnt/sd": (flash device image)
-    #!/bin/bash
+flash_host device image tmp_mount="/mnt/sd": (flash device image) #!/bin/bash
     set -euxo pipefail
 
     HOSTNAME_FILE="{{ tmp_mount }}/hostname"
 
+    UUID=$(uuidgen)
+    e2fsck -f /dev/sda2
+    tune2fs /dev/sda2 -U ${UUID}
     mount {{ device }} {{ tmp_mount }}
-    fs_uuid=$(lsblk -no UUID "/dev/sda2" | cut -d "-" -f 2)
-    echo "puck-$fs_uuid" > $HOSTNAME_FILE
+
+    FS_UUID=$($UUID | cut -d "-" -f 2)
+    echo "puck-$FS_UUID" > $HOSTNAME_FILE
     umount {{ tmp_mount }}
 
 # Run a packer target
