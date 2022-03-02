@@ -18,6 +18,8 @@ EPUCK_ROS2_CC_PATH := TOOLS_DIR + "/epuck_ros2/installation/cross_compile"
 
 DOCKER_BIN := env_var_or_default("DOCKER_BIN", "sudo docker")
 
+PUCK_HOSTNAME_GEN := "puck-" + `uuidgen | cut -d "-" -f 2`
+
 # Ssh into a pi with fixes applied
 ssh pi_address user="pi" pass="raspberry": _clear_known_hosts _wifi_lab
     sshpass -p "{{ pass }}" ssh -oStrictHostKeyChecking=no "{{ user }}@{{ pi_address }}"
@@ -62,7 +64,7 @@ ainv target_subnet=SUBNET_CMD: _wifi_lab
     echo "$changes" | xargs -I {} sh -c "printf '{} ansible_ssh_user=pi ansible_ssh_pass=raspberry\n' >> {{ INVENTORY }}"
 
 # Take an image of a connected media
-snap device outfile="./rpi.img": && (shrink outfile)
+isnap device outfile="./rpi.img": && (ishrink outfile)
     @# From https://stackoverflow.com/questions/965053/extract-filename-and-extension-in-bash
     @if [[ "{{ extension(outfile) }}" != "img" ]]; then \
         printf "WARNING: '{{ outfile }}' is not a .img file!\n"; \
@@ -74,19 +76,22 @@ snap device outfile="./rpi.img": && (shrink outfile)
     sudo dd if={{ device }} of={{ outfile }} status=progress bs=64k
 
 # Shrink an image's size
-shrink image="./rpi.img":
+ishrink image="./rpi.img":
     sudo {{ TOOLS_DIR }}/pishrink/pishrink.sh -v {{ image }}
 
+# Flash a pi sd card, patch the hostname
+iflash device image="./rpi.img": (_flash_raw device image) (hostset device + "2")
+
 # Flash an image file to a device
-flash device image="./rpi.img":
+_flash_raw device image="./rpi.img":
     sudo dd if={{ image }} of={{ device }} status=progress bs=64k
 
-# Patch a hostname into an image
-hostset image tmp_mount="/mnt/sd" hostname=("puck-" + `uuidgen | cut -d "-" -f 2`): (_mount_pi_image image tmp_mount "0" "2") && (_umount_pi_image tmp_mount "0")
-    echo {{ hostname }} | sudo tee "{{ tmp_mount }}/etc/hostname"
+# Patch a hostname onto a (mounted) medium or image
+hostset prefix="/mnt/sd" hostname=PUCK_HOSTNAME_GEN:
+    echo {{ hostname }} | sudo tee "{{ prefix }}/etc/hostname"
 
 # Run a packer target
-image target="./packer/from_raspios_remote.pkr.hcl" +args="": _packer_plugin_arm && (shrink "./output-pipuck/image")
+packer target="./packer/from_raspios_remote.pkr.hcl" +args="": _packer_plugin_arm && (ishrink "./output-pipuck/image")
     sudo packer build {{ args }} "{{ target }}"
 
 # Build an image from scratch with pi-gen
@@ -136,7 +141,7 @@ _clear_known_hosts inv=INVENTORY:
     done < {{ inv }}
 
 # Cross-compile epuck_ros2
-epuckros2 pi_img="./rpi.img" out="./epuck_ros2_out" pkg="ros2topic" loop="0": _epuckros2_di (_mount_pi_image pi_img out loop "2") && (_umount_pi_image out loop)
+epuckros2 pi_img="./rpi.img" out="./epuck_ros2_out" pkg="ros2topic" loop="0": _epuckros2_di (_mnt_pimg pi_img out loop "2") && (_umnt_pimg out loop)
     @# Ignore failure so that cleanup still runs
     -{{ DOCKER_BIN }} run \
         --rm \
@@ -155,13 +160,13 @@ _epuckros2_di:
         {{ DOCKER_BIN }} build -t rpi_cross_compile -f Dockerfile .
 
 # Mount a pi image
-_mount_pi_image image mountpoint loop_num part_num:
+_mnt_pimg image mountpoint loop_num part_num:
     sudo partx -va -n {{ part_num }}:{{ part_num }} "{{ image }}"
     mkdir -vp "{{ mountpoint }}"
     sudo mount -v /dev/loop{{ loop_num }}p{{ part_num }} "{{ mountpoint }}"
 
 # Unmount a pi image
-_umount_pi_image mountpoint loop_num:
+_umnt_pimg mountpoint loop_num:
     sudo umount -v "{{ mountpoint }}"
     sudo partx -vd /dev/loop{{ loop_num }}
     sudo losetup -vd /dev/loop{{ loop_num }}
