@@ -2,9 +2,9 @@
 *.iso
 *.log
 *.tar*
-.packer.d
-.packer_ssh*
+.env
 elfshaker_data
 epuck_ros2_out
 inventory.ini
 output-pipuck
+packer/plugins

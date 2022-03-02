@@ -1,20 +1,22 @@
 set positional-arguments := true
+set dotenv-load := true
 
 # Tries to guess the wifi device
-export WIFI_DEV := `ip address | grep wl | head -n 1 | cut -d ':' -f 2 | xargs`
-# Gets the subnet on the wifi device
+export WIFI_DEV := trim(`ip address | grep wl | head -n 1 | cut -d ':' -f 2`)
+# Gets the subnet on the wifi device (lazy evaluated)
 SUBNET_CMD := "$(ip -o -f inet addr show $WIFI_DEV | awk '/scope global/ {print $4}')"
 
+# Disable host key checking with ansible to avoid quibbles
 export ANSIBLE_HOST_KEY_CHECKING := "False"
 
 # Directories
 INVENTORY := "./inventory.ini"
 TOOLS_DIR := "./tools"
 PACKER_DIR := "./packer"
-export PACKER_PLUGIN_PATH := "./.packer.d/plugins"
+export PACKER_PLUGIN_PATH := PACKER_DIR + "/plugins"
 EPUCK_ROS2_CC_PATH := TOOLS_DIR + "/epuck_ros2/installation/cross_compile"
 
-DOCKER_BIN := "sudo docker"
+DOCKER_BIN := env_var_or_default("DOCKER_BIN", "sudo docker")
 
 # Ssh into a pi with fixes applied
 ssh pi_address user="pi" pass="raspberry": _clear_known_hosts _wifi_lab
@@ -56,7 +58,7 @@ ainv target_subnet=SUBNET_CMD: _wifi_lab
         exit 1
     fi
     echo "$changes"
-    rm -f {{ INVENTORY }}
+    rm -vf {{ INVENTORY }}
     echo "$changes" | xargs -I {} sh -c "printf '{} ansible_ssh_user=pi ansible_ssh_pass=raspberry\n' >> {{ INVENTORY }}"
 
 # Take an image of a connected media
@@ -93,7 +95,7 @@ flash_host device image tmp_mount="/mnt/sd": (flash device image)
 
 # Run a packer target
 image target="./packer/from_raspios_remote.pkr.hcl" +args="": _packer_plugin_arm && (shrink "./output-pipuck/image")
-    sudo PACKER_PLUGIN_PATH="{{ PACKER_PLUGIN_PATH }}" packer build {{ args }} "{{ target }}"
+    sudo packer build {{ args }} "{{ target }}"
 
 # Build an image from scratch with pi-gen
 pigen:
@@ -118,7 +120,7 @@ _packer_plugin_arm:
     #!/bin/bash
     set -euxo pipefail
 
-    if [[ -f "{{ PACKER_PLUGIN_PATH }}/packer-plugin-arm-image" ]]; then
+    if {{ path_exists(PACKER_PLUGIN_PATH + "/packer-plugin-arm-image") }} ; then
         echo "Plugin already built..."
         exit 0
     fi
@@ -143,6 +145,7 @@ _clear_known_hosts inv=INVENTORY:
 
 # Cross-compile epuck_ros2
 epuckros2 pi_img="./rpi.img" out="./epuck_ros2_out" pkg="ros2topic" loop="0": _epuckros2_di (_mount_pi_image pi_img out loop "2") && (_umount_pi_image out loop)
+    @# Ignore failure so that cleanup still runs
     -{{ DOCKER_BIN }} run \
         --rm \
         --device /dev/fuse \
@@ -166,7 +169,7 @@ _mount_pi_image image out loop_num part_num:
     sudo mount -v /dev/loop{{ loop_num }}p{{ part_num }} "{{ out }}"
 
 # Unmount a pi image
-_umount_pi_image out loop_num:
-    sudo umount -v "{{ out }}"
+_umount_pi_image mountpoint loop_num:
+    sudo umount -v "{{ mountpoint }}"
     sudo partx -vd /dev/loop{{ loop_num }}
     sudo losetup -vd /dev/loop{{ loop_num }}
