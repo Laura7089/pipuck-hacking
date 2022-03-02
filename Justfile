@@ -81,7 +81,7 @@ ishrink image=(ARTS_DIR + "/rpi.img"):
     sudo {{ TOOLS_DIR }}/pishrink/pishrink.sh -v {{ image }}
 
 # Flash a medium, patch the hostname
-iflash device image=(ARTS_DIR + "rpi.img"): (_flash_raw device image) (hostset device + "2")
+iflash device image=(ARTS_DIR + "/rpi.img"): (_flash_raw device image) (hostset device)
 
 # Flash an image file to a device
 _flash_raw device image=(ARTS_DIR + "/rpi.img"):
@@ -144,7 +144,7 @@ _clear_known_hosts inv=INVENTORY:
     done < {{ inv }}
 
 # Cross-compile epuck_ros2
-epuckros2 pi_fs=(ARTS_DIR + "rpi.img") out=(ARTS_DIR + "/epuck_ros2_out") pkg="ros2topic" loop="0": _epuckros2_di (_mnt pi_fs out loop "2") && (_umnt out loop)
+epuckros2 pi_fs=(ARTS_DIR + "/rpi.img") out=(ARTS_DIR + "/epuck_ros2_out") pkg="ros2topic" loop="0": _epuckros2_di (_mnt pi_fs out loop "2") && (_umnt out loop)
     @# Ignore failure so that cleanup still runs
     -{{ DOCKER_BIN }} run \
         --rm \
