@@ -88,10 +88,14 @@ flash_host device image tmp_mount="/mnt/sd": (flash device image)
 
     HOSTNAME_FILE="{{ tmp_mount }}/etc/hostname"
 
-    sudo mount -v {{ device }} {{ tmp_mount }}
-    fs_uuid=$(lsblk -no UUID "/dev/sda2" | cut -d "-" -f 2)
-    sudo sh -c "echo puck-$fs_uuid > $HOSTNAME_FILE"
-    sudo umount -v {{ tmp_mount }}
+    UUID=$(uuidgen)
+    e2fsck -f /dev/sda2
+    tune2fs /dev/sda2 -U ${UUID}
+    mount {{ device }} {{ tmp_mount }}
+
+    FS_UUID=$($UUID | cut -d "-" -f 2)
+    echo "puck-$FS_UUID" > $HOSTNAME_FILE
+    umount {{ tmp_mount }}
 
 # Run a packer target
 image target="./packer/from_raspios_remote.pkr.hcl" +args="": _packer_plugin_arm && (shrink "./output-pipuck/image")
