@@ -11,11 +11,12 @@ export ANSIBLE_HOST_KEY_CHECKING := "False"
 
 # Directories
 INVENTORY := "./inventory.ini"
-TOOLS_DIR := "./tools"
 ARTS_DIR := "./artefacts"
+DEFAULT_IMAGE := join(ARTS_DIR, "images/rpi.img")
+TOOLS_DIR := "./tools"
+EPUCK_ROS2_CC_PATH := join(TOOLS_DIR, "epuck_ros2/installation/cross_compile")
 PACKER_DIR := "./packer"
-export PACKER_PLUGIN_PATH := PACKER_DIR + "/plugins"
-EPUCK_ROS2_CC_PATH := TOOLS_DIR + "/epuck_ros2/installation/cross_compile"
+export PACKER_PLUGIN_PATH := join(PACKER_DIR, "plugins")
 
 DOCKER_BIN := env_var_or_default("DOCKER_BIN", "sudo docker")
 
@@ -65,7 +66,7 @@ ainv target_subnet=SUBNET_CMD: _wifi_lab
     echo "$changes" | xargs -I {} sh -c "printf '{} ansible_ssh_user=pi ansible_ssh_pass=raspberry\n' | tee -a {{ INVENTORY }}"
 
 # Take an image of a connected media
-isnap device outfile=(ARTS_DIR + "/rpi.img"): && (ishrink outfile)
+isnap device outfile=DEFAULT_IMAGE: && (ishrink outfile)
     @# From https://stackoverflow.com/questions/965053/extract-filename-and-extension-in-bash
     @if [[ "{{ extension(outfile) }}" != "img" ]]; then \
         printf "WARNING: '{{ outfile }}' is not a .img file!\n"; \
@@ -77,14 +78,14 @@ isnap device outfile=(ARTS_DIR + "/rpi.img"): && (ishrink outfile)
     sudo dd if={{ device }} of={{ outfile }} status=progress bs=64k
 
 # Shrink an image's size
-ishrink image=(ARTS_DIR + "/rpi.img"):
+ishrink image=DEFAULT_IMAGE:
     sudo {{ TOOLS_DIR }}/pishrink/pishrink.sh -v {{ image }}
 
 # Flash a medium, patch the hostname
-iflash device image=(ARTS_DIR + "/rpi.img"): (_flash_raw device image) (hostset device)
+iflash device image=DEFAULT_IMAGE: (_flash_raw device image) (hostset device)
 
 # Flash an image file to a device
-_flash_raw device image=(ARTS_DIR + "/rpi.img"):
+_flash_raw device image=DEFAULT_IMAGE:
     sudo dd if={{ image }} of={{ device }} status=progress bs=64k
 
 # Patch a hostname onto a medium or image
@@ -92,7 +93,7 @@ hostset target mountpoint="/mnt/sd" hostname=PUCK_HOSTNAME_GEN: (_mnt target mou
     echo {{ hostname }} | sudo tee "{{ mountpoint }}/etc/hostname"
 
 # Run a packer target
-packer target=(PACKER_DIR + "/from_raspios_remote.pkr.hcl") +args="": _packer_plugin_arm && (ishrink ARTS_DIR + "/output-pipuck/image")
+packer target=join(PACKER_DIR, "from_raspios_remote.pkr.hcl") +args="": _packer_plugin_arm && (ishrink join(ARTS_DIR, "output-pipuck/image"))
     sudo packer build {{ args }} "{{ target }}"
 
 # Build an image from scratch with pi-gen
@@ -118,7 +119,7 @@ _packer_plugin_arm:
     #!/bin/bash
     set -euxo pipefail
 
-    if {{ path_exists(PACKER_PLUGIN_PATH + "/packer-plugin-arm-image") }} ; then
+    if {{ path_exists(join(PACKER_PLUGIN_PATH, "packer-plugin-arm-image")) }} ; then
         echo "Plugin already built..."
         exit 0
     fi
@@ -144,7 +145,7 @@ _clear_known_hosts inv=INVENTORY:
     done < {{ inv }}
 
 # Cross-compile epuck_ros2
-epuckros2 pi_fs=(ARTS_DIR + "/rpi.img") out=(ARTS_DIR + "/epuck_ros2_out") pkg="ros2topic" loop="0": _epuckros2_di (_mnt pi_fs out loop "2") && (_umnt out loop)
+epuckros2 pi_fs=DEFAULT_IMAGE out=join(ARTS_DIR, "epuck_ros2_out") pkg="ros2topic" loop="0": _epuckros2_di (_mnt pi_fs out loop "2") && (_umnt out loop)
     @# Ignore failure so that cleanup still runs
     -{{ DOCKER_BIN }} run \
         --rm \
