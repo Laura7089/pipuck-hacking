@@ -15,8 +15,6 @@ ARTS_DIR := "./artefacts"
 DEFAULT_IMAGE := join(ARTS_DIR, "images/rpi.img")
 TOOLS_DIR := "./tools"
 EPUCK_ROS2_CC_PATH := join(TOOLS_DIR, "epuck_ros2/installation/cross_compile")
-PACKER_DIR := "./packer"
-export PACKER_PLUGIN_PATH := join(PACKER_DIR, "plugins")
 
 DOCKER_BIN := env_var_or_default("DOCKER_BIN", "sudo docker")
 
@@ -96,10 +94,6 @@ hostset target mountpoint="/mnt/sd" hostname=PUCK_HOSTNAME_GEN: (_mnt target mou
     echo {{ hostname }} | sudo tee "{{ mountpoint }}/etc/hostname"
     sudo sed -i 's/.*127\.0\.1\.1/127.0.1.1\t{{ hostname }}/' {{ mountpoint }}/etc/hosts
 
-# Run a packer target
-packer target=join(PACKER_DIR, "from_raspios_remote.pkr.hcl") +args="": _packer_plugin_arm && (ishrink join(ARTS_DIR, "output-pipuck/image"))
-    sudo packer build {{ args }} "{{ target }}"
-
 # Build an image from scratch with pi-gen
 pigen:
     cd {{ TOOLS_DIR }}/pi-gen-yrl && ./build.sh
@@ -117,26 +111,6 @@ _wifi_lab network="rts_lab":
 _wifi_reset network="rts_lab":
     sudo netctl stop {{ network }}
     sudo systemctl start netctl-auto@{{ WIFI_DEV }}
-
-# Build the packer-plugin-arm-image binary
-_packer_plugin_arm:
-    #!/bin/bash
-    set -euxo pipefail
-
-    if {{ path_exists(join(PACKER_PLUGIN_PATH, "packer-plugin-arm-image")) }} ; then
-        echo "Plugin already built..."
-        exit 0
-    fi
-
-    (
-        cd "{{ TOOLS_DIR }}/packer-plugin-arm-image"
-        export "GOPATH=$(mktemp -d)"
-        go generate ./...
-        go build -o packer-plugin-arm-image .
-    )
-    install -vDm 0755 \
-        "{{ TOOLS_DIR }}/packer-plugin-arm-image/packer-plugin-arm-image" \
-        "{{ PACKER_PLUGIN_PATH }}/packer-plugin-arm-image"
 
 # Clear the hosts in INVENTORY from ~/.ssh/known_hosts
 _clear_known_hosts inv=INVENTORY:
