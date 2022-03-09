@@ -94,6 +94,7 @@ _flash_raw device image=DEFAULT_IMAGE:
 # Patch a hostname onto a medium or image
 hostset target mountpoint="/mnt/sd" hostname=PUCK_HOSTNAME_GEN: (_mnt target mountpoint "0" "2") && (_umnt mountpoint "0")
     echo {{ hostname }} | sudo tee "{{ mountpoint }}/etc/hostname"
+    sudo sed -i 's/.*127\.0\.1\.1/127.0.1.1\t{{ hostname }}/' {{ mountpoint }}/etc/hosts
 
 # Run a packer target
 packer target=join(PACKER_DIR, "from_raspios_remote.pkr.hcl") +args="": _packer_plugin_arm && (ishrink join(ARTS_DIR, "output-pipuck/image"))
@@ -187,6 +188,7 @@ _mnt_dev device mountpoint _loop part:
 
 # Unmount a device
 _umnt_dev mountpoint:
+    -sudo umount -v "{{ mountpoint }}/boot"
     sudo umount "{{ mountpoint }}"
 
 # Mount a pi image (assumes partition layout)
