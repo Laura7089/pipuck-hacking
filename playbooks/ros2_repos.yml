@@ -1,0 +1,16 @@
+- import_playbook: ./cacerts.yml
+
+- name: enable ros2 apt repos
+  hosts: all
+  become: yes
+
+  tasks:
+    - name: enable ros2 gpg key
+      apt_key:
+        url: https://raw.githubusercontent.com/ros/rosdistro/master/ros.asc
+        state: present
+
+    - name: enable ros2 repo
+      apt_repo:
+        repo: "deb [arch=amd64,arm64] http://repo.ros2.org/ubuntu/main buster main"
+        state: present

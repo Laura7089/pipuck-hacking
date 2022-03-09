@@ -1,0 +1,31 @@
+- import_playbook: ./colcon.yml
+
+- name: install rclpy
+  hosts: all
+  gather_facts: no
+
+  tasks:
+    - name: install apt deps
+      apt:
+        name:
+          - python3-sphinx
+          - python3-pip
+        state: present
+
+    - name: install pip deps
+      pip:
+        name: sphinx_autodoc_typehints
+        state: present
+
+    - name: get rclpy source
+      git:
+        repo: https://github.com/ros2/rclpy
+        dest: ~/rclpy_ws/src/rclpy
+        state: present
+
+    - name: run colcon build
+      shell: |
+        source /opt/ros/foxy/setup.bash && \
+        colcon build --symlink-install
+      args:
+        chdir: ~/rclpy_ws

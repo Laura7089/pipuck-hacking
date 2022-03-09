@@ -1,0 +1,12 @@
+- import_playbook: ./ros2_repos.yml
+
+- name: install colcon
+  hosts: all
+  gather_facts: no
+  become: yes
+
+  tasks:
+    - name: install colcon
+      apt:
+        name: python3-colcon-common-extensions
+        state: present
