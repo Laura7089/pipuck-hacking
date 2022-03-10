@@ -1,18 +1,32 @@
 - import_playbook: ./colcon.yml
 
+- name: install rcl
+  hosts: all
+  gather_facts: no
+
+  tasks:
+    - name: get rcl source
+      git:
+        repo: https://github.com/ros2/rcl.git
+        dest: ~/rclpy_ws/src/rcl
+        version: release-latest
+
 - name: install rclpy
   hosts: all
   gather_facts: no
 
   tasks:
     - name: install apt deps
+      become: yes
       apt:
         name:
           - python3-sphinx
           - python3-pip
+          - libssl-dev
         state: present
 
     - name: install pip deps
+      become: yes
       pip:
         name: sphinx_autodoc_typehints
         state: present
@@ -21,11 +35,12 @@
       git:
         repo: https://github.com/ros2/rclpy
         dest: ~/rclpy_ws/src/rclpy
-        state: present
+        version: release-latest
 
     - name: run colcon build
       shell: |
         source /opt/ros/foxy/setup.bash && \
-        colcon build --symlink-install
+        colcon build
       args:
         chdir: ~/rclpy_ws
+        executable: /bin/bash

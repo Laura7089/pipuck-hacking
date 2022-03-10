@@ -11,6 +11,8 @@
         state: present
 
     - name: enable ros2 repo
-      apt_repo:
-        repo: "deb [arch=amd64,arm64] http://repo.ros2.org/ubuntu/main buster main"
+      lineinfile:
+        line: "deb [arch=amd64,arm64] http://repo.ros2.org/ubuntu/main {{ ansible_distribution_release }} main"
+        path: /etc/apt/sources.list.d/ros2-latest.list
+        create: yes
         state: present
