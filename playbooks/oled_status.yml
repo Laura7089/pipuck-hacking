@@ -1,26 +1,3 @@
-- name: custom hostname script
-  hosts: all
-  become: yes
-  gather_facts: no
-
-  tasks:
-    - name: copy script to machine
-      copy:
-        src: "../scripts/hostname_set.sh"
-        dest: "/usr/bin/hostname_set"
-        mode: 0755
-    - name: link into startup
-      file:
-        src: "/usr/bin/hostname_set"
-        dest: "/etc/init.d/hostname_set"
-        state: link
-      notify:
-        - run script
-
-  handlers:
-    - name: run script
-      shell: "/usr/bin/hostname_set"
-
 - name: oled status
   hosts: all
   gather_facts: no

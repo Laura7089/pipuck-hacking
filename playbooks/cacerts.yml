@@ -1,0 +1,16 @@
+- name: fix ca-certs
+  hosts: all
+  become: yes
+
+  tasks:
+    - name: download cURL/mozilla cert bundle insecurely
+      get_url:
+        url: https://curl.se/ca/cacert.pem
+        dest: /usr/share/ca-certificates/local/ca-bundle.crt
+        validate_certs: no
+      handle: update certs
+
+  handlers:
+    - name: update certs
+      shell:
+        command: update-ca-certificates
