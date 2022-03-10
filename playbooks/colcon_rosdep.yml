@@ -27,3 +27,6 @@
       shell: rosdep init
       args:
         creates: /etc/ros/rosdep/sources.list.d/20-default.list
+
+    - name: update rosdep
+      shell: rosdep update
