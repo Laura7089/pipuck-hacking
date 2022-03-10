@@ -115,12 +115,14 @@ _wifi_reset network="rts_lab":
 # Clear the hosts in INVENTORY from ~/.ssh/known_hosts
 _clear_known_hosts inv=INVENTORY:
     #!/bin/bash
-    set -euxo pipefail
+    set -euo pipefail
 
+    printf "Clearing inventory from known hosts..."
     while read line; do
         ip=$(echo "$line" | cut -d " " -f 1)
         sed -i "/$ip/d" ~/.ssh/known_hosts
     done < {{ inv }}
+    printf "done.\n"
 
 # Cross-compile epuck_ros2
 epuckros2 pi_fs=DEFAULT_IMAGE out=join(ARTS_DIR, "epuck_ros2_out") pkg="ros2topic" loop="0": _epuckros2_di (_mnt pi_fs out loop "2") && (_umnt out loop)
