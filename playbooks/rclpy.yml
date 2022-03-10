@@ -1,4 +1,4 @@
-- import_playbook: ./colcon.yml
+- import_playbook: ./colcon_rosdep.yml
 
 - name: install rcl
   hosts: all
@@ -36,6 +36,14 @@
         repo: https://github.com/ros2/rclpy
         dest: ~/rclpy_ws/src/rclpy
         version: release-latest
+
+    - name: install deps with rosdep
+      shell: |
+        source /opt/ros/foxy/setup.bash && \
+        rosdep install --from-paths src --ignore-src --rosdistro foxy
+      args:
+        chdir: ~/rclpy_ws
+        executable: /bin/bash
 
     - name: run colcon build
       shell: |

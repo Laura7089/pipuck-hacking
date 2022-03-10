@@ -1,0 +1,29 @@
+- import_playbook: ./ros2_repos.yml
+
+- name: install colcon
+  hosts: all
+  gather_facts: no
+  become: yes
+
+  tasks:
+    - name: install colcon
+      apt:
+        name: python3-colcon-common-extensions
+        state: present
+
+- name: rosdep
+  hosts: all
+  gather_facts: no
+  become: yes
+
+  tasks:
+    - name: install rosdep
+      apt:
+        name: python3-rosdep
+        install_recommends: yes
+        state: present
+
+    - name: initialise rosdep
+      shell: rosdep init
+      args:
+        creates: /etc/ros/rosdep/sources.list.d/20-default.list
