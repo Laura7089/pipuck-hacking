@@ -25,7 +25,7 @@ ssh pi_address user="pi" pass="raspberry": _clear_known_hosts _wifi_lab
     sshpass -p "{{ pass }}" ssh -oStrictHostKeyChecking=no "{{ user }}@{{ pi_address }}"
 
 scp file pi_dest user="pi" pass="raspberry": _clear_known_hosts _wifi_lab
-    sshpass -p "{{ pass }}" scp -oStrictHostKeyChecking=no "{{ file }}" "{{ user }}@{{ pi_dest }}"
+    sshpass -p "{{ pass }}" scp -r -oStrictHostKeyChecking=no "{{ file }}" "{{ user }}@{{ pi_dest }}"
 
 # Run an ansible playbook
 aplay playbook +args="": _clear_known_hosts _wifi_lab
