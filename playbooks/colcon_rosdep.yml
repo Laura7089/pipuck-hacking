@@ -6,20 +6,17 @@
   become: yes
 
   tasks:
-    - name: install colcon
+    - name: install (unlisted!) dependencies of ros
       apt:
-        name: python3-colcon-common-extensions
+        name:
+          - libtinyxml2-dev
         state: present
 
-- name: rosdep
-  hosts: all
-  gather_facts: no
-  become: yes
-
-  tasks:
-    - name: install rosdep
+    - name: install colcon & rosdep
       apt:
-        name: python3-rosdep
+        name:
+        - python3-colcon-common-extensions
+        - python3-rosdep
         install_recommends: yes
         state: present
 
@@ -27,6 +24,8 @@
       shell: rosdep init
       args:
         creates: /etc/ros/rosdep/sources.list.d/20-default.list
+      notify: update rosdep repos
 
-    - name: update rosdep
+  handlers:
+    - name: update rosdep repos
       shell: rosdep update

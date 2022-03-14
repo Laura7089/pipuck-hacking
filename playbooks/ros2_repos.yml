@@ -16,3 +16,14 @@
         path: /etc/apt/sources.list.d/ros2-latest.list
         create: yes
         state: present
+
+- name: add ros env to shell
+  hosts: all
+  gather_facts: no
+
+  tasks:
+    - name: add line to bashrc
+      lineinfile:
+        line: "source /opt/ros/foxy/setup.bash"
+        path: "/home/pi/.bashrc"
+        state: present
