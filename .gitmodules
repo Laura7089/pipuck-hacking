@@ -19,3 +19,6 @@
 [submodule "tools/packer-plugin-arm-image"]
 	path = tools/packer-plugin-arm-image
 	url = https://github.com/solo-io/packer-plugin-arm-image.git
+[submodule "tools/webots-ros2"]
+	path = tools/webots-ros2
+	url = https://github.com/cyberbotics/webots_ros2.git
