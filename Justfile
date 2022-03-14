@@ -21,22 +21,22 @@ DOCKER_BIN := env_var_or_default("DOCKER_BIN", "sudo docker")
 PUCK_HOSTNAME_GEN := "puck-" + `uuidgen | cut -d "-" -f 2`
 
 # Ssh into a pi with fixes applied
-ssh pi_address user="pi" pass="raspberry": _clear_known_hosts _wifi_lab
+ssh pi_address user="pi" pass="raspberry": _clear_known_hosts
     sshpass -p "{{ pass }}" ssh -oStrictHostKeyChecking=no "{{ user }}@{{ pi_address }}"
 
-scp file pi_dest user="pi" pass="raspberry": _clear_known_hosts _wifi_lab
+scp file pi_dest user="pi" pass="raspberry": _clear_known_hosts
     sshpass -p "{{ pass }}" scp -r -oStrictHostKeyChecking=no "{{ file }}" "{{ user }}@{{ pi_dest }}"
 
 # Run an ansible playbook
-aplay playbook +args="": _clear_known_hosts _wifi_lab
+aplay playbook +args="": _clear_known_hosts
     ansible-playbook -i {{ INVENTORY }} {{ args }} {{ playbook }}
 
 # Run an arbitrary command with ansible
-ashell +command: _clear_known_hosts _wifi_lab
+ashell +command: _clear_known_hosts
     ansible -i {{ INVENTORY }} all -a "{{ command }}"
 
 # Generate an ansible inventory
-ainv target_subnet=SUBNET_CMD: _wifi_lab
+ainv target_subnet=SUBNET_CMD:
     #!/bin/bash
     set -eo pipefail
 
@@ -98,17 +98,13 @@ hostset target mountpoint="/mnt/sd" hostname=PUCK_HOSTNAME_GEN: (_mnt target mou
 pigen:
     cd {{ TOOLS_DIR }}/pi-gen-yrl && ./build.sh
 
-# netctl: switch to correct wifi network
-wifi action="lab" network="rts_lab":
-    just _wifi_{{ action }} {{ network }}
-
 # netctl: switch to lab wifi
-_wifi_lab network="rts_lab":
+wifi_lab network="rts_lab":
     sudo systemctl stop netctl-auto@{{ WIFI_DEV }}
     sudo netctl start {{ network }}
 
 # netctl: turn off lab wifi
-_wifi_reset network="rts_lab":
+wifi_reset network="rts_lab":
     sudo netctl stop {{ network }}
     sudo systemctl start netctl-auto@{{ WIFI_DEV }}
 
