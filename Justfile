@@ -91,6 +91,9 @@ _flash_raw device image=DEFAULT_IMAGE:
 
 # Patch a hostname onto a medium or image
 hostset target mountpoint="/mnt/sd" hostname=PUCK_HOSTNAME_GEN: (_mnt target mountpoint "0" "2") && (_umnt mountpoint "0")
+    # Sets hostname when booted for the first time
+    echo {{ hostname }} | sudo tee "{{ mountpoint }}/boot/hostname.set"
+    # Allows for hostname to be changed on old (post-booted) image
     echo {{ hostname }} | sudo tee "{{ mountpoint }}/etc/hostname"
     sudo sed -i 's/.*127\.0\.1\.1/127.0.1.1\t{{ hostname }}/' {{ mountpoint }}/etc/hosts
 
@@ -164,7 +167,7 @@ _umnt_dev mountpoint:
     sudo umount "{{ mountpoint }}"
 
 # Mount a pi image (assumes partition layout)
-_mnt_pimg image mountpoint loop_num _part:
+_mnt_pimg image mountpoint loop_num=0:
     sudo partx -va "{{ image }}"
     mkdir -vp "{{ mountpoint }}"
     sudo mount -v /dev/loop{{ loop_num }}p2 "{{ mountpoint }}"
